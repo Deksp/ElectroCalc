@@ -2,25 +2,12 @@
 #define NODE_H
 
 #include <complex>
-#include <QMultiMap>
-#include <QVector>
-
-#include "layoutscheme.h"
-
-class INode;
-class VertexNode;
-class GeneratorNode;
-class BranchNode;
-class LoadNode;
+#include <QString>
 
 typedef std::complex<double> complexnum;
 
-//--------------------------------------------------------------------------
-
 class Node
 {
-    friend LayoutScheme;
-    Node();
 public:
     enum
     {
@@ -29,6 +16,7 @@ public:
       TypeBranchNode,
       TypeLoadNode
     };
+    Node();
     virtual ~Node() = default;
 
     Node(Node &&) = delete;
@@ -36,83 +24,19 @@ public:
     Node &operator=(Node &&) = delete;
     Node &operator=(const Node &) = delete;
 
-    virtual int getId();
-    virtual int type() = 0;
-    virtual QString getIndex();
+    virtual uint getId() const;
+    virtual int type() const = 0;
+    virtual QString getIndex() const;
+    virtual complexnum getTypeNodeProperty() const = 0;
 
 protected:
-    unsigned int m_id;
+    uint m_id;
     QString m_index;
-    virtual void setId(unsigned int id);
-    virtual void setIndex(QString index);
+
+    virtual void setId(uint id) = 0;
+    virtual void setIndex(QString index) = 0;
 };
 
-//--------------------------------------------------------------------------
 
-class VertexNode : public Node
-{
-public:
-    VertexNode();
-    virtual ~VertexNode() = default;
-
-private:
-    QVector<LoadNode *> load;
-    virtual void addLoad();
-
-protected:
-    QVector<BranchNode *> branch;
-    virtual void addBranch();
-};
-
-//--------------------------------------------------------------------------
-
-class GeneratorNode : public VertexNode
-{
-public:
-    GeneratorNode();
-    ~GeneratorNode() = default;
-
-private:
-    double m_voltage;
-
-protected:
-    virtual void setVoltage(double voltage);
-};
-
-//--------------------------------------------------------------------------
-
-class BranchNode : public Node
-{
-    friend VertexNode;
-public:
-    BranchNode();
-    ~BranchNode() = default;
-
-private:
-    VertexNode *m_firstNode;
-    VertexNode *m_secondNode;
-
-protected:
-    complexnum m_resistace;
-
-};
-
-//--------------------------------------------------------------------------
-
-class LoadNode : public Node
-{
-    friend VertexNode;
-public:
-    LoadNode();
-    ~LoadNode() = default;
-
-private:
-    VertexNode *m_assignedNode;
-
-protected:
-    complexnum m_resistace;
-};
-
-//--------------------------------------------------------------------------
 
 #endif // NODE_H

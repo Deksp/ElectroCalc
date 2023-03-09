@@ -19,29 +19,35 @@ class SchemeItem : public QGraphicsPathItem
 public:
     enum
     {
-      SchemeType = QGraphicsItem::UserType + 3,
+      SchemeType = QGraphicsItem::UserType,
       TypeVertexItem,
       TypeGeneratorItem,
       TypeBranchItem,
       TypeLoadItem
     };
 
-    SchemeItem();
-    virtual ~SchemeItem();
+    SchemeItem(QString index);
+    virtual ~SchemeItem() = default;
 
     void setTransparent(bool opacity);
-    void setStage();
+    void setStage(bool);
+    void setBlock(bool);
+    void setNode(Node *node);
+
+    bool isBlock() const;
 
 private:
-    bool m_stage;
+    bool m_block, m_stage;
     qreal m_opacity;
     SelectionGlow *selectionGlow;
 
 protected:
-    Node *node;
+    Node *m_node;
+    QString m_index;
     void paint(QPainter *painter,
                const QStyleOptionGraphicsItem *option,
                QWidget *widget = nullptr) override;
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
 };
 
 //--------------------------------------------------------------------------
@@ -50,8 +56,10 @@ class SelectionGlow : public QGraphicsItem
 {
 public:
     SelectionGlow(QGraphicsItem* parent = nullptr);
+    int type() const override;
 
 protected:
+
     void paint(QPainter *painter,
                const QStyleOptionGraphicsItem *option,
                QWidget *widget = nullptr) override;
@@ -63,11 +71,11 @@ protected:
 class VertexItem : public SchemeItem
 {
 public:
-    VertexItem();
+    VertexItem(QString index);
     int type() const override;
 
 private:
-    QRect m_rect;
+    QRectF m_rect;
 
 protected:
     void paint(QPainter *painter,
@@ -80,11 +88,11 @@ protected:
 class GeneratorItem : public SchemeItem
 {
 public:
-    GeneratorItem();
+    GeneratorItem(QString index);
     int type() const override;
 
 private:
-    QRect m_rect;
+    QRectF m_rect;
 
 protected:
     void paint(QPainter *painter,

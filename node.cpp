@@ -5,12 +5,12 @@ Node::Node()
 
 }
 
-void Node::setId(unsigned int id)
+uint Node::getId() const
 {
-
+    return 0;
 }
 
-void GeneratorNode::setVoltage(double voltage)
+QString Node::getIndex() const
 {
-
+    return 0;
 }

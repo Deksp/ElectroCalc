@@ -16,9 +16,9 @@ protected:
     void wheelEvent(QWheelEvent *event) override;
 
 public slots:
-    void setChoiseMode();
-    void setGrabMode();
-    void showGrid(bool value);
+    void setChoiseViewMode();
+    void setGrabViewMode();
+    void showGrid(bool visible);
 };
 
 #endif // VIEWSCHEM_H

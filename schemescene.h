@@ -37,6 +37,7 @@ signals:
 private:
     LayoutScheme *m_layoutScheme;
 
+    static const quint8 m_distance = 150;
     static const quint8 m_gridStep = 26;
     static const quint16 m_sceneSize = 8060;
 

@@ -15,7 +15,7 @@ SchemeItem::SchemeItem(QString index)
      m_opacity(0.5), selectionGlow(new SelectionGlow(this)),
      m_node(nullptr), m_index(index)
 {
-    //m_index = index;
+
 }
 
 void SchemeItem::setTransparent(bool transparent)
@@ -101,13 +101,27 @@ VertexItem::VertexItem(QString index)
     m_rect = QRectF(-26.5, -26.5, 53, 53);
     form.addEllipse(m_rect);
     setPath(form);
-    //setTransformOriginPoint(m_rect.width() / 2, m_rect.height() / 2);
     setZValue(0.2);
 }
 
 int VertexItem::type() const
 {
     return TypeVertexItem;
+}
+
+void VertexItem::removeBranch(BranchItem *branch)
+{
+
+}
+
+void VertexItem::removeBranchs()
+{
+
+}
+
+void VertexItem::addBranch(BranchItem *branch)
+{
+
 }
 
 void VertexItem::paint(QPainter *painter,
@@ -131,13 +145,12 @@ void VertexItem::paint(QPainter *painter,
 //--------------------------------------------------------------------------
 
 GeneratorItem::GeneratorItem(QString index)
-    : SchemeItem(index)
+    : VertexItem(index)
 {
     QPainterPath form;
     m_rect = QRectF(-26.5, -26.5, 53, 53);
     form.addRect(m_rect);
     setPath(form);
-    //setTransformOriginPoint(QPointF(26,26));
     setZValue(0.2);
 }
 
@@ -166,32 +179,50 @@ void GeneratorItem::paint(QPainter *painter,
 
 //--------------------------------------------------------------------------
 
-BranchItem::BranchItem()
-    : SchemeItem("non")
+BranchItem::BranchItem(SchemeItem *startItem)
+    : SchemeItem("non"), m_startItem(startItem),
+      m_endItem(nullptr)
 {
-
+    m_line.setP1(m_startItem->pos());
+    const quint16 width = 100;
+    const quint16 height = 30;
+    qreal xLine = boundingRect().width()/2 - width/2;
+    qreal yLine = boundingRect().height()/2 - height/2;
+    m_resistor = QRectF(xLine, yLine, width, height);
+    setPen(QPen(Qt::blue, 5, Qt::SolidLine, Qt::RoundCap));
 }
 
 int BranchItem::type() const
 {
-    return 0;
+    return TypeBranchItem;
 }
 
 void BranchItem::setP2(const QPointF point)
 {
-
+    QPainterPath form;
+    form.moveTo(m_line.p1());
+    form.lineTo(point + QPointF(0.5, 0.5));
+    setPath(form);
+    m_line.setP2(point + QPointF(0.5, 0.5));
 }
 
 void BranchItem::setEndItem(SchemeItem *item)
 {
-
+    m_endItem = item;
 }
 
 void BranchItem::paint(QPainter *painter,
            const QStyleOptionGraphicsItem *option,
            QWidget *widget)
 {
+    Q_UNUSED(widget)
 
+    SchemeItem::paint(painter, option);
+
+    painter->setPen(pen());
+    painter->setRenderHint(QPainter::Antialiasing);
+    painter->drawLine(m_line.p1(), m_line.p2());
+    painter->drawRect(m_resistor);
 }
 
 //--------------------------------------------------------------------------

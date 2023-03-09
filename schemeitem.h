@@ -72,12 +72,17 @@ class VertexItem : public SchemeItem
 {
 public:
     VertexItem(QString index);
+    virtual ~VertexItem() = default;
     int type() const override;
+    void removeBranch(BranchItem *branch);
+    void removeBranchs();
+    void addBranch(BranchItem *branch);
 
 private:
-    QRectF m_rect;
+    QVector<BranchItem *> m_branch;
 
 protected:
+    QRectF m_rect;
     void paint(QPainter *painter,
                const QStyleOptionGraphicsItem *option,
                QWidget *widget = nullptr) override;
@@ -85,14 +90,14 @@ protected:
 
 //--------------------------------------------------------------------------
 
-class GeneratorItem : public SchemeItem
+class GeneratorItem : public VertexItem
 {
 public:
     GeneratorItem(QString index);
     int type() const override;
 
 private:
-    QRectF m_rect;
+    //QRectF m_rect;
 
 protected:
     void paint(QPainter *painter,
@@ -105,14 +110,17 @@ protected:
 class BranchItem : public SchemeItem
 {
 public:
-    BranchItem();
+    BranchItem(SchemeItem *startItem);
     int type() const override;
 
     void setP2(const QPointF point);
     void setEndItem(SchemeItem *item);
 
 private:
+    QLineF m_line;
     QRectF m_resistor;
+    SchemeItem *m_startItem;
+    SchemeItem *m_endItem;
 
 protected:
     void paint(QPainter *painter,

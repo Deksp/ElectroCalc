@@ -103,7 +103,7 @@ QPointF SchemeScene::gridPoint(QPointF point)
 void SchemeScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     QGraphicsScene::mousePressEvent(event);
-
+bool bloc = false;
     switch (event->button())
     {
     case Qt::LeftButton:
@@ -121,7 +121,14 @@ void SchemeScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
             break;
 
         case InsertBranch:
-
+            if (itemAt(event->scenePos(),QTransform()) != nullptr && !bloc)
+            {
+                m_insertedItem = new BranchItem(static_cast<SchemeItem*>(itemAt(event->scenePos(),QTransform())));
+                static_cast<BranchItem*>(m_insertedItem)->setP2(event->scenePos()+QPointF(1,1));
+                bloc = true;
+            }
+            if (bloc)
+                static_cast<BranchItem*>(m_insertedItem)->setBlock(true);
             break;
 
         default:
@@ -154,7 +161,7 @@ void SchemeScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
                 {
                     QPointF distanceVector = selitem->pos() - item->pos();
                     qreal distance = sqrt(pow(distanceVector.x(), 2) + pow(distanceVector.y(), 2));
-                    if (distance < 130)
+                    if (distance < m_distance)
                     {
                         static_cast<SchemeItem*>(selitem)->setBlock(true);
                         break;
@@ -173,7 +180,7 @@ void SchemeScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
             {
                 QPointF distanceVector = event->scenePos() - item->pos();
                 qreal distance = sqrt(pow(distanceVector.x(), 2) + pow(distanceVector.y(), 2));
-                if (distance < 130)
+                if (distance < m_distance)
                 {
                     block = true;
                     break;
@@ -183,6 +190,9 @@ void SchemeScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
         break;
 
     case InsertBranch:
+        if (m_insertedItem != nullptr && !static_cast<BranchItem*>(m_insertedItem)->isBlock())
+        static_cast<BranchItem*>(m_insertedItem)->setP2(event->scenePos());
+        break;
     case InsertLoad:
 
         break;

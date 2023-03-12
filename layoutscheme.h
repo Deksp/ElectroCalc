@@ -18,7 +18,7 @@ public:
 
     Node *addVertex();
     Node *addGenerator();
-    Node *addBranch();
+    Node *addBranch(const Node *startNode, const Node *endNnode);
     Node *addLoad();
 
     void setVoltage(Node *Generator, double voltage);

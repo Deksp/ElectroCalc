@@ -19,7 +19,7 @@ Node *LayoutScheme::addGenerator()
     return nullptr;
 }
 
-Node *LayoutScheme::addBranch()
+Node *LayoutScheme::addBranch(const Node *startNode, const Node *endNnode)
 {
     return nullptr;
 }

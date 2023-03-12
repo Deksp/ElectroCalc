@@ -20,7 +20,7 @@ void SchemeScene::setMode(Mode mode)
         m_mode == InsertLoad)
         && mode == Select) emit unChekButton();
 
-    m_mode = mode;
+
     if (m_insertedItem != nullptr)
     {
         removeItem(m_insertedItem);
@@ -28,7 +28,7 @@ void SchemeScene::setMode(Mode mode)
         m_insertedItem = nullptr;
     }
 
-    switch (m_mode)
+    switch (mode)
     {
     case None:
         for (QGraphicsItem* item : items())
@@ -45,6 +45,12 @@ void SchemeScene::setMode(Mode mode)
             if (item->type() > QGraphicsItem::UserType)
             {
                 item->setFlags(QGraphicsItem::ItemIsSelectable|QGraphicsItem::ItemIsMovable);
+                if (item->type() == SchemeItem::TypeBranchItem ||
+                    item->type() == SchemeItem::TypeLoadItem)
+                {
+                    item->setFlag(QGraphicsItem::ItemIsMovable, false);
+                    item->setFlag(QGraphicsItem::ItemIsSelectable, false);
+                }
             }
         break;
     case Grab:
@@ -56,8 +62,16 @@ void SchemeScene::setMode(Mode mode)
         m_insertedItem = new GeneratorItem(m_layoutScheme->getNextGIndex());
         break;
     case InsertBranch:
+        for (QGraphicsItem* item : items())
+            if (item->type() > QGraphicsItem::UserType)
+            {
+                item->setSelected(false);
+                item->setFlag(QGraphicsItem::ItemIsSelectable, false);
+                item->setFlag(QGraphicsItem::ItemIsMovable, false);
+            }
         break;
     case InsertLoad:
+        m_insertedItem = new LoadItem;
         break;
     default:
         break;
@@ -77,11 +91,12 @@ void SchemeScene::setMode(Mode mode)
         addItem(m_insertedItem);
         break;
     case InsertBranch:
-
         break;
     default:
         break;
     }
+
+    m_mode = mode;
 }
 
 void SchemeScene::setGridBinding(bool gridBinding)
@@ -103,15 +118,20 @@ QPointF SchemeScene::gridPoint(QPointF point)
 void SchemeScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     QGraphicsScene::mousePressEvent(event);
-bool bloc = false;
+    static bool stage = false;
     switch (event->button())
     {
     case Qt::LeftButton:
         switch (m_mode)
         {
+        case None:
+            break;
+        case Select:
+            break;
+        case Grab:
+            break;
         case InsertVertex:
         case InsertGenerator:
-        case InsertLoad:
             if (!m_insertedItem->isBlock())
             {
                 m_insertedItem->setTransparent(false);
@@ -119,18 +139,51 @@ bool bloc = false;
                 setMode(m_mode);
             }
             break;
-
-        case InsertBranch:
-            if (itemAt(event->scenePos(),QTransform()) != nullptr && !bloc)
+        case InsertLoad:
+            if (m_insertedItem->isAllowed())
             {
-                m_insertedItem = new BranchItem(static_cast<SchemeItem*>(itemAt(event->scenePos(),QTransform())));
-                static_cast<BranchItem*>(m_insertedItem)->setP2(event->scenePos()+QPointF(1,1));
-                bloc = true;
+                m_insertedItem->setTransparent(false);
+                SchemeItem *item = static_cast<SchemeItem*>(
+                            itemAt(event->scenePos(), QTransform())->parentItem());
+                static_cast<VertexItem*>(item)->addLoad(static_cast<LoadItem*>(m_insertedItem));
+                m_insertedItem->setNode(item->getNode());
+                static_cast<LoadItem*>(m_insertedItem)->setItem(item);
+                m_insertedItem = nullptr;
+                setMode(m_mode);
             }
-            if (bloc)
-                static_cast<BranchItem*>(m_insertedItem)->setBlock(true);
             break;
-
+        case InsertBranch:
+        {
+            SchemeItem *item = static_cast<SchemeItem*>(itemAt(event->scenePos(), QTransform()));
+            if (item != nullptr &&
+                (item->parentItem()->type() == SchemeItem::TypeVertexItem ||
+                item->parentItem()->type() == SchemeItem::TypeGeneratorItem))
+            {
+                if (stage)
+                {
+                    static_cast<BranchItem*>(m_insertedItem)->setStage(true);
+                    static_cast<BranchItem*>(m_insertedItem)->
+                            setEndItem(static_cast<SchemeItem*>(item->parentItem()));
+                    static_cast<VertexItem*>(item->parentItem())->
+                            addBranch(static_cast<BranchItem*>(m_insertedItem));
+                    m_insertedItem->setNode(m_layoutScheme->addBranch(
+                                                static_cast<BranchItem*>(m_insertedItem)->getStartItem()->getNode(),
+                                                static_cast<BranchItem*>(m_insertedItem)->getEndItem()->getNode()));
+                    m_insertedItem = nullptr;
+                    stage = false;
+                    setMode(m_mode);
+                }
+                else if (!stage)
+                {
+                    m_insertedItem = new BranchItem(static_cast<SchemeItem*>(item->parentItem()));
+                    static_cast<VertexItem*>(item->parentItem())->
+                            addBranch(static_cast<BranchItem*>(m_insertedItem));
+                    addItem(m_insertedItem);
+                    stage = true;
+                }
+            }
+        }
+            break;
         default:
             break;
         }
@@ -157,7 +210,7 @@ void SchemeScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
         {
             for (QGraphicsItem *item : items())
             {
-                if (item->type() != QGraphicsItem::UserType && selitem != item)
+                if (item->type() > SchemeItem::TypeLoadItem && selitem != item)
                 {
                     QPointF distanceVector = selitem->pos() - item->pos();
                     qreal distance = sqrt(pow(distanceVector.x(), 2) + pow(distanceVector.y(), 2));
@@ -176,7 +229,7 @@ void SchemeScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
     case InsertGenerator:
         m_insertedItem->setPos(gridPoint(event->scenePos()));
         for (QGraphicsItem *item : items())
-            if (item->type() != QGraphicsItem::UserType && m_insertedItem != item)
+            if (item->type() > SchemeItem::TypeLoadItem && m_insertedItem != item)
             {
                 QPointF distanceVector = event->scenePos() - item->pos();
                 qreal distance = sqrt(pow(distanceVector.x(), 2) + pow(distanceVector.y(), 2));
@@ -190,13 +243,46 @@ void SchemeScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
         break;
 
     case InsertBranch:
-        if (m_insertedItem != nullptr && !static_cast<BranchItem*>(m_insertedItem)->isBlock())
-        static_cast<BranchItem*>(m_insertedItem)->setP2(event->scenePos());
+    {
+        static SchemeItem *item = nullptr;
+        if (itemAt(event->scenePos(), QTransform()) != nullptr)
+        {
+            if (itemAt(event->scenePos(), QTransform())->parentItem()->type() > SchemeItem::TypeLoadItem)
+            {
+                if (m_insertedItem != nullptr &&
+                        static_cast<SchemeItem*>(itemAt(event->scenePos(), QTransform())->parentItem())->isBlock())
+                    m_insertedItem->setBlock(true);
+                static_cast<SchemeItem*>(itemAt(event->scenePos(), QTransform())->parentItem())->setAllowed(true);
+                item = static_cast<SchemeItem*>(itemAt(event->scenePos(), QTransform())->parentItem());
+            }
+        }
+        else if (item != nullptr)
+        {
+            item->setAllowed(false);
+            if (m_insertedItem != nullptr)
+                m_insertedItem->setBlock(false);
+        }
+        if (m_insertedItem != nullptr && !static_cast<BranchItem*>(m_insertedItem)->isStage())
+        {
+            static_cast<BranchItem*>(m_insertedItem)->moveEndPoint(gridPoint(event->scenePos()));
+        }
         break;
+    }
     case InsertLoad:
-
+    {
+        bool allowed = false;
+        m_insertedItem->setPos(gridPoint(event->scenePos()));
+        for (auto item : m_insertedItem->collidingItems())
+        {
+            if (item->type() == SchemeItem::TypeVertexItem)
+                allowed = true;
+            if (item->type() == SchemeItem::TypeGeneratorItem)
+                block = true;
+            m_insertedItem->setAllowed(allowed);
+            m_insertedItem->setBlock(block);
+        }
         break;
-
+    }
     default:
         break;
     }

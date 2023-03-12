@@ -34,6 +34,9 @@ MainWindow::MainWindow(QWidget *parent)
     setCentralWidget(centralWidget);
     setWindowTitle(tr("ElectroCalc"));
     setGeometry(300,200,1600,1000);
+
+    fileToolBar->setEnabled(false);
+    editToolBar->setEnabled(false);
 }
 
 MainWindow::~MainWindow()
@@ -179,9 +182,12 @@ void MainWindow::unCheckButtonGroup()
 
 void MainWindow::buttonGroupClicked(QAbstractButton *sender, bool cheked)
 {
-    grabModeAction->setChecked(false);
-    choiseModeAction->setChecked(true);
-    choiseModeAction->triggered(true);
+    if (grabModeAction->isChecked())
+    {
+        grabModeAction->setChecked(false);
+        choiseModeAction->setChecked(true);
+        choiseModeAction->triggered(true);
+    }
 
     for (QAbstractButton *button : buttonGroup->buttons())
     {

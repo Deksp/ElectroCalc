@@ -3,6 +3,7 @@
 
 #include <complex>
 #include <QString>
+#include <QDebug>
 
 typedef std::complex<double> complexnum;
 
@@ -13,6 +14,8 @@ public:
     {
       TypeVertexNode,
       TypeGeneratorNode,
+      UserType,
+      TypeGenBranchNode,
       TypeBranchNode,
       TypeLoadNode
     };
@@ -27,7 +30,12 @@ public:
     virtual uint getId() const;
     virtual int type() const = 0;
     virtual QString getIndex() const;
+    virtual bool isLink(Node *node) const = 0;
     virtual complexnum getTypeNodeProperty() const = 0;
+    virtual QString getStringTypeNodeProperty() const = 0;
+    virtual Node *getAssignedNode(Node *node = nullptr);
+
+    friend QDebug operator<<(QDebug output, const Node* obj);
 
 protected:
     uint m_id;

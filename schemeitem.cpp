@@ -29,7 +29,7 @@ void SchemeItem::setBlock(bool block)
     m_block = block;
 }
 
-void SchemeItem::setNode(const Node *node)
+void SchemeItem::setNode(Node *node)
 {
     m_node = node;
 }
@@ -54,7 +54,7 @@ bool SchemeItem::isAllowed() const
     return m_allowed;
 }
 
-const Node *SchemeItem::getNode() const
+Node *SchemeItem::getNode() const
 {
     return m_node;
 }
@@ -109,7 +109,7 @@ void SelectionGlow::paint(QPainter *painter, const QStyleOptionGraphicsItem*, QW
     }
     else if (static_cast<SchemeItem*>(parentItem())->isAllowed())
     {
-        painter->setPen(QPen(QColor(0, 65, 255, 150), 5));
+        painter->setPen(QPen(QColor(0, 255, 65, 150), 5));
         painter->drawPath(parentItem()->shape());
     }
 }
@@ -147,6 +147,8 @@ void VertexItem::removeBranchs()
 
 void VertexItem::addBranch(BranchItem *branch)
 {
+    if (branch == nullptr)
+        return;
     m_branch << branch;
 }
 
@@ -190,7 +192,7 @@ void VertexItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
         }
     }
     for (auto load : m_load)
-        load->setPos(position);
+        static_cast<LoadItem*>(load)->movableItem(position);
 }
 
 //--------------------------------------------------------------------------
@@ -210,6 +212,17 @@ int GeneratorItem::type() const
     return TypeGeneratorItem;
 }
 
+void GeneratorItem::addBranch(BranchItem *branch)
+{
+    VertexItem::addBranch(branch);
+    setStage(true);
+}
+
+void GeneratorItem::addLoad(LoadItem *)
+{
+
+}
+
 void GeneratorItem::paint(QPainter *painter,
            const QStyleOptionGraphicsItem *option,
            QWidget *widget)
@@ -226,15 +239,18 @@ void GeneratorItem::paint(QPainter *painter,
     font.setPointSize(22);
     painter->setFont(font);
     painter->drawText(m_rect, Qt::AlignCenter, "Е" + m_index);
-
-
+    font.setPointSize(8);
+    painter->setFont(font);
+    painter->drawText(QRectF(-26.5, 13, 53, 10), Qt::AlignCenter, "220 v");
 }
 
 //--------------------------------------------------------------------------
-BranchItem::BranchItem(SchemeItem *const startItem)
+BranchItem::BranchItem(SchemeItem *const startItem, const QString &resistsnce)
     : SchemeItem("Branch"), m_start(), m_end(),
       m_line(0,0,0,0), m_resistor(), m_path(),
-      m_startItem(startItem), m_endItem(nullptr)
+      m_resistsnce(resistsnce),
+      m_startItem(startItem),
+      m_endItem(nullptr)
 {
     setTransparent(false);
     setPos(m_startItem->scenePos());
@@ -242,10 +258,12 @@ BranchItem::BranchItem(SchemeItem *const startItem)
     moveEndPoint(m_startItem->scenePos());
 }
 
-BranchItem::BranchItem(SchemeItem *const startItem, SchemeItem *const endItem)
+BranchItem::BranchItem(SchemeItem *const startItem, SchemeItem *const endItem, const QString &resistsnce)
     : SchemeItem("Branch"), m_start(), m_end(),
       m_line(0,0,0,0), m_resistor(), m_path(),
-      m_startItem(startItem), m_endItem(endItem)
+      m_resistsnce(resistsnce),
+      m_startItem(startItem),
+      m_endItem(endItem)
 {
     setTransparent(false);
     setPos(m_startItem->scenePos());
@@ -259,6 +277,12 @@ void BranchItem::setEndItem(SchemeItem *const endItem)
         return;
     m_endItem = endItem;
     moveEndPoint(m_endItem->scenePos());
+}
+
+void BranchItem::setResText(QString &resistsnce)
+{
+    m_resistsnce = resistsnce;
+    update();
 }
 
 void BranchItem::movePoint(const QPointF &start, const QPointF &end)
@@ -335,16 +359,22 @@ void BranchItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option
     SchemeItem::paint(painter, option);
 
     painter->setRenderHint(QPainter::Antialiasing);
-    painter->setPen(QPen(Qt::blue, 5, Qt::SolidLine, Qt::RoundCap));
+    painter->setPen(QPen(QColor(0, 20, 110), 4, Qt::SolidLine, Qt::RoundCap));
     painter->setBrush(Qt::white);
 
     painter->drawPath(path());
 
     painter->setPen(QPen(Qt::black, 2));
 
-    painter->drawText(boundingRect(), Qt::AlignCenter, "Уhdr");
+    painter->drawText(boundingRect(), Qt::AlignCenter, m_resistsnce);
 
 }
+
+void BranchItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+{
+
+}
+
 int BranchItem::type() const
 {
     return TypeBranchItem;
@@ -364,10 +394,12 @@ const SchemeItem *BranchItem::getEndItem() const
 
 //--------------------------------------------------------------------------
 
-LoadItem::LoadItem()
-    : SchemeItem("non")
+LoadItem::LoadItem(const QString &resistsnce)
+    : SchemeItem("non"), m_resistsnce(resistsnce),
+      m_start(0, 0), m_end(0, 0)
 {
     QPainterPath path;
+
     path.moveTo(0,0);
     path.lineTo(0, 50);
     path.addRect(-15,50,30,80);
@@ -377,12 +409,20 @@ LoadItem::LoadItem()
     path.lineTo(-10,190);
     path.lineTo(0,200);
     setPath(path);
+
+    m_path.moveTo(0,0);
+    m_path.lineTo(50, 0);
+    m_path.addRect(50,-15,80,30);
+    m_path.moveTo(130,0);
+    m_path.lineTo(200,0);
+    m_path.lineTo(190,10);
+    m_path.lineTo(190,-10);
+    m_path.lineTo(200,0);
 }
 
 void LoadItem::setItem(SchemeItem * const item)
 {
     m_item = item;
-    setPos(m_item->scenePos());
 }
 
 const SchemeItem *LoadItem::getItem()
@@ -395,16 +435,73 @@ int LoadItem::type() const
     return SchemeItem::TypeLoadItem;
 }
 
+void LoadItem::setResText(QString &resistsnce)
+{
+    m_resistsnce = resistsnce;
+    update();
+}
+
+void LoadItem::moveLoad(const QPointF &point)
+{
+    setPos(static_cast<SchemeScene*>(scene())->gridPoint(point));
+    m_start = m_item->scenePos() - pos();
+    QPainterPath path;
+    path.clear();
+    path.moveTo(0,0);
+    path.lineTo(0, 50);
+    path.addRect(-15,50,30,80);
+    path.moveTo(0,130);
+    path.lineTo(0,200);
+    path.lineTo(10,190);
+    path.lineTo(-10,190);
+    path.lineTo(0,200);
+    path.moveTo(0,0);
+    path.moveTo(m_start);
+    setPath(path);
+}
+
+void LoadItem::movableItem(const QPointF &point)
+{
+    setPos(point - m_start);
+    m_start = m_item->scenePos() - pos();
+    QPainterPath path;
+    path.clear();
+    path.moveTo(0,0);
+    path.lineTo(0, 50);
+    path.addRect(-15,50,30,80);
+    path.moveTo(0,130);
+    path.lineTo(0,200);
+    path.lineTo(10,190);
+    path.lineTo(-10,190);
+    path.lineTo(0,200);
+    path.moveTo(0,0);
+    path.moveTo(m_start);
+    setPath(path);
+}
+
 void LoadItem::paint(QPainter *painter,
            const QStyleOptionGraphicsItem *option,
            QWidget *widget)
 {
     Q_UNUSED(widget)
     SchemeItem::paint(painter, option);
-
-    painter->setPen(QPen(Qt::blue, 5, Qt::SolidLine, Qt::RoundCap));
+    painter->setPen(QPen(QColor(0, 20, 110), 3, Qt::SolidLine, Qt::RoundCap));
+    painter->drawLine(m_start,m_end);
+    painter->rotate(90);
     painter->setBrush(Qt::white);
-    painter->drawPath(path());
+    painter->drawPath(m_path);
+    painter->setPen(QPen(Qt::black, 2));
+    QFont font = painter->font();
+    font.setPointSize(15);
+    painter->setFont(font);
+    painter->drawText(QRect(50,-15,80,30), Qt::AlignCenter, m_resistsnce);
+
+}
+
+void LoadItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+{
+    QGraphicsItem::mouseMoveEvent(event);
+    moveLoad(event->scenePos());
 }
 
 //--------------------------------------------------------------------------

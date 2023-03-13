@@ -22,6 +22,7 @@ public:
     };
 
     SchemeScene();
+    LayoutScheme *getLayoutSchem() const;
 
 public slots:
     void turn();
@@ -48,6 +49,7 @@ private:
 protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
 };
 
 #endif // SCHEMSCENE_H

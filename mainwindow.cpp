@@ -155,13 +155,14 @@ void MainWindow::createActions()
     gridbinding = new QAction(QIcon(":/images/gridBinding.png"), tr("GridBinding"), this);
     gridbinding->setStatusTip(tr("Grid binding"));
     gridbinding->setCheckable(true);
-    gridbinding->setChecked(true);
+    gridbinding->setChecked(false);
     gridbinding->setShortcut(tr("Shift+F6"));
     connect(gridbinding, &QAction::toggled, getCurrentScene(), &SchemeScene::setGridBinding);
 
     runAction = new QAction(QIcon(":/images/run"), tr("Run"), this);
     runAction->setStatusTip(tr("Run"));
     runAction->setShortcut(tr("Ctrl+R"));
+    connect(runAction, &QAction::triggered, this, &MainWindow::Calc);
 }
 
 SchemeScene *MainWindow::getCurrentScene()
@@ -178,6 +179,13 @@ void MainWindow::unCheckButtonGroup()
 {
     for (QAbstractButton *button : buttonGroup->buttons())
         button->setChecked(false);
+}
+
+void MainWindow::Calc()
+{
+
+    calc.startingCalculations(getCurrentScene()->getLayoutSchem());
+
 }
 
 void MainWindow::buttonGroupClicked(QAbstractButton *sender, bool cheked)

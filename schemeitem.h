@@ -34,14 +34,14 @@ public:
     void setTransparent(bool opacity);
     void setStage(bool);
     void setBlock(bool);
-    void setNode(const Node *node);
+    void setNode(Node *node);
     void setAllowed(bool);
 
     bool isBlock() const;
     bool isStage() const;
     bool isAllowed() const;
 
-    const Node *getNode() const;
+    Node *getNode() const;
 
 private:
     bool m_block, m_stage, m_allowed;
@@ -49,7 +49,7 @@ private:
     SelectionGlow *selectionGlow;
 
 protected:
-    const Node *m_node;
+    Node *m_node;
     QString m_index;
     void paint(QPainter *painter,
                const QStyleOptionGraphicsItem *option,
@@ -83,13 +83,16 @@ public:
     int type() const override;
     void removeBranch(BranchItem *branch);
     void removeBranchs();
-    void addBranch(BranchItem *branch);
-    void addLoad(LoadItem *load);
+    virtual void addBranch(BranchItem *branch);
+    virtual void addLoad(LoadItem *load);
+
+private:
+    QVector<LoadItem *> m_load;
 
 protected:
     QRectF m_rect;
     QVector<BranchItem *> m_branch;
-    QVector<LoadItem *> m_load;
+
     void paint(QPainter *painter,
                const QStyleOptionGraphicsItem *option,
                QWidget *widget = nullptr) override;
@@ -103,9 +106,10 @@ class GeneratorItem : public VertexItem
 public:
     GeneratorItem(QString index);
     int type() const override;
+    void addBranch(BranchItem *branch) override;
 
 private:
-    //QRectF m_rect;
+    void addLoad(LoadItem *) override;
 
 protected:
     void paint(QPainter *painter,
@@ -118,8 +122,8 @@ protected:
 class BranchItem : public SchemeItem
 {
 public:
-    BranchItem(SchemeItem *const strartItem);
-    BranchItem(SchemeItem *const strartItem, SchemeItem *const endItem);
+    BranchItem(SchemeItem *const strartItem, const QString &resistsnce);
+    BranchItem(SchemeItem *const strartItem, SchemeItem *const endItem, const QString &resistsnce);
     int type() const override;
 
     const SchemeItem *getStartItem() const;
@@ -128,6 +132,7 @@ public:
     void moveStartPoint(const QPointF &start);
     void moveEndPoint(const QPointF &end);
     void setEndItem(SchemeItem *const endItem);
+    void setResText(QString &resistsnce);
 
 private:
     QPointF m_start;
@@ -135,6 +140,7 @@ private:
     QLineF m_line;
     QPolygonF m_resistor;
     QPainterPath m_path;
+    QString m_resistsnce;
     SchemeItem *m_startItem;
     SchemeItem *m_endItem; 
 
@@ -147,6 +153,7 @@ protected:
     void paint(QPainter *painter,
                const QStyleOptionGraphicsItem *option,
                QWidget *widget = nullptr) override;
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
 };
 
 //--------------------------------------------------------------------------
@@ -154,13 +161,19 @@ protected:
 class LoadItem : public SchemeItem
 {
 public:
-    LoadItem();
+    LoadItem(const QString &resistance);
     void setItem(SchemeItem *const item);
     const SchemeItem *getItem();
     int type() const override;
+    void setResText(QString &resistsnce);
+    void moveLoad(const QPointF &point);
+    void movableItem(const QPointF &point);
 
 private:
     QRectF m_resistor;
+    QString m_resistsnce;
+    QPointF m_start, m_end;
+    QPainterPath m_path;
     SchemeItem *m_item;
 
     static const quint16 resistor_width = 80;
@@ -170,6 +183,7 @@ protected:
     void paint(QPainter *painter,
                const QStyleOptionGraphicsItem *option,
                QWidget *widget = nullptr) override;
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
 };
 
 //--------------------------------------------------------------------------

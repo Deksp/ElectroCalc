@@ -9,36 +9,46 @@ typedef QVector<QVector<std::complex<double>>> Matrix;
 
 class Calculation
 {
-    class MutualPair;
-    typedef QMap<MutualPair, complexnum> MutualVal;
+    struct MutualPair;
+    typedef QMap<MutualPair*, complexnum> MutualVals;
+    typedef QVector<MutualVals>  GroupsVal;
 
 public:
     enum Mutual_Type{
+      gen,
       gengen,
-        genvertex,
-        vertexload,
-        vertexbranch
+      branchgen,
+      loadgen
     };
     Calculation();
 
+    void startingCalculations(LayoutScheme *layout);
+
 private:
-    Matrix condactionMatrix;
-    Matrix invcondactionMatrix;
+    LayoutScheme *m_layout;
 
-    MutualVal Z;
-    MutualVal I_first;
-    MutualVal I_second;
-    MutualVal I_final;
+    Matrix m_condactionMatrix;
+    Matrix m_invcondactionMatrix;
 
-    /*complexnum z(Node& gen);
-    complexnum z(Node& gen, Node& mutualgen);
-    complexnum z(Node& ver, Node& mutualgen, int key = 1);
-    complexnum z(Node& ver, Node& linkver, Node& mutualgen);*/
+    GroupsVal m_Z;
+    MutualVals I_first;
+    MutualVals I_second;
+    MutualVals I_final;
 
-    class MutualPair
+    void inverse();
+    void OUTCHECK(LayoutScheme *layout);
+    void OUT(LayoutScheme *layout);
+    void Zcalc(LayoutScheme *layout);
+    void Icalc(LayoutScheme *layout);
+    QString Zname(MutualPair &pair, Node *currentNode);
+    QString Iname(MutualPair &pair, Node *currentNode);
+    complexnum Z(const MutualPair &pair, Node *currentNode);
+
+    struct MutualPair
     {
-    public:
         MutualPair(Node *node, Node *mutualNode, Mutual_Type mutualtype);
+        Node *node, *mutualNode;
+        Mutual_Type mutualType;
     };
 };
 

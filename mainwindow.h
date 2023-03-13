@@ -36,8 +36,10 @@ private:
 signals:
 
 private slots:
+    void Calc();
     void buttonGroupClicked(QAbstractButton *sender, bool cheked);
     void unCheckButtonGroup();
+
 
 private:
 ///-----interfase elements-----///

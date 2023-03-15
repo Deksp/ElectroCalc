@@ -38,7 +38,7 @@ signals:
 
 private slots:
     void Calc();
-    void inputWidgetShow(LayoutScheme *layout, Node *node);
+    void inputWidgetShow(LayoutScheme *layout, Node *node, QGraphicsSceneMouseEvent *event);
     void buttonGroupClicked(QAbstractButton *sender, bool cheked);
     void unCheckButtonGroup();
 
@@ -106,6 +106,7 @@ class InputWidget : public QLineEdit
 public:
     InputWidget(LayoutScheme *layout, Node *node);
     void keyPressEvent(QKeyEvent *event) override;
+    complexnum convert(const QString &text);
 private:
     LayoutScheme *m_layout;
     Node *m_node;

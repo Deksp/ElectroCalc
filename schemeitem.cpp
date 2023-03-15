@@ -366,8 +366,8 @@ void BranchItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option
     painter->drawPath(path());
 
     painter->setPen(QPen(Qt::black, 2));
-
-    painter->drawText(boundingRect(), Qt::AlignCenter, m_resistsnce);
+    if (m_node != nullptr)
+        painter->drawText(boundingRect(), Qt::AlignCenter, m_node->getStringTypeNodeProperty());
 
 }
 
@@ -495,7 +495,8 @@ void LoadItem::paint(QPainter *painter,
     QFont font = painter->font();
     font.setPointSize(15);
     painter->setFont(font);
-    painter->drawText(QRect(50,-15,80,30), Qt::AlignCenter, m_resistsnce);
+    if (m_node != nullptr)
+        painter->drawText(QRect(50,-15,80,30), Qt::AlignCenter, m_node->getStringTypeNodeProperty());
 
 }
 

@@ -344,9 +344,11 @@ void SchemeScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 {
     if (itemAt(event->scenePos(), QTransform()) != nullptr)
         if (itemAt(event->scenePos(), QTransform())->parentItem() != nullptr)
-            if (itemAt(event->scenePos(), QTransform())->parentItem()->type() == SchemeItem::TypeGeneratorItem)
+            if (itemAt(event->scenePos(), QTransform())->parentItem()->type() == SchemeItem::TypeGeneratorItem ||
+                    itemAt(event->scenePos(), QTransform())->parentItem()->type() == SchemeItem::TypeBranchItem ||
+                    itemAt(event->scenePos(), QTransform())->parentItem()->type() == SchemeItem::TypeLoadItem)
                 emit input(m_layoutScheme,
-                           static_cast<SchemeItem*>(itemAt(event->scenePos(), QTransform())->parentItem())->getNode());
+                           static_cast<SchemeItem*>(itemAt(event->scenePos(), QTransform())->parentItem())->getNode(), event);
 }
 
 void SchemeScene::clearScene()

@@ -9,6 +9,7 @@
 #include <QTreeWidgetItem>
 #include <QTreeWidget>
 #include <QKeyEvent>
+#include <QGraphicsSceneMouseEvent>
 
 extern QString tabStyle;
 
@@ -203,9 +204,10 @@ void MainWindow::Calc()
     calc.endCalculations();
 }
 
-void MainWindow::inputWidgetShow(LayoutScheme *layout, Node *node)
+void MainWindow::inputWidgetShow(LayoutScheme *layout, Node *node, QGraphicsSceneMouseEvent *event)
 {
     InputWidget *input = new InputWidget(layout, node);
+    //input->setGeometry(event->scenePos().x(), event->scenePos().y(), input->width(),input->height());
     input->show();
 }
 
@@ -266,16 +268,22 @@ void InputWidget::keyPressEvent(QKeyEvent *event)
             m_layout->setVoltage(m_node, text().toDouble());
             break;
         case Node::TypeBranchNode:
-            //m_layout->setBranch(m_node, text().)
+            m_layout->setBranch(m_node, convert(text()));
             break;
         case Node::TypeLoadNode:
-
+            m_layout->setLoad(m_node, convert(text()));
             break;
         }
         this->~InputWidget();
     }
     else
         QLineEdit::keyPressEvent(event);
+}
+
+complexnum InputWidget::convert(const QString &text)
+{
+    QStringList textNew = text.split(u',');
+    return complexnum(textNew[0].toDouble(), textNew[1].toDouble());
 }
 
 QString tabStyle =

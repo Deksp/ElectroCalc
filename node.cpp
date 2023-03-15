@@ -7,12 +7,12 @@ Node::Node()
 
 uint Node::getId() const
 {
-    return 0;
+    return m_id;
 }
 
 QString Node::getIndex() const
 {
-    return 0;
+    return m_index;
 }
 
 Node *Node::getAssignedNode(Node *node)

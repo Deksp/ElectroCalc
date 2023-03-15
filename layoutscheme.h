@@ -15,6 +15,7 @@ class LayoutScheme
 ///----Inner_Classes----///
 public:
     LayoutScheme();
+    ~LayoutScheme();
 
     Node *addVertex();
     Node *addGenerator();
@@ -29,6 +30,7 @@ public:
     void deleteBranch(Node *node, Node* linkNode);
     void deleteNode(Node *node);
 
+    complexnum getVoltage(Node *generator) const;
     QVector<VertexNode *> getVertexes() const;
     QVector<GeneratorNode *> getGenerators() const;
     QVector<BranchNode *> getBranchs() const;
@@ -92,6 +94,7 @@ private:
         GeneratorNode();
         ~GeneratorNode() = default;
         virtual void setVoltage(double voltage);
+        virtual double getVoltage() const;
 
         virtual int type() const override;
         virtual Node *getAssignedNode(Node *node = nullptr) override;

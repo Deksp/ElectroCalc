@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QToolButton>
+#include <QLineEdit>
 
 #include "viewscheme.h"
 #include "schemescene.h"
@@ -37,6 +38,7 @@ signals:
 
 private slots:
     void Calc();
+    void inputWidgetShow(LayoutScheme *layout, Node *node);
     void buttonGroupClicked(QAbstractButton *sender, bool cheked);
     void unCheckButtonGroup();
 
@@ -97,5 +99,16 @@ public:
     QWidget *createCellWidget();
 };
 ///-----class for setting up buttons----///
+
+class InputWidget : public QLineEdit
+{
+    Q_OBJECT
+public:
+    InputWidget(LayoutScheme *layout, Node *node);
+    void keyPressEvent(QKeyEvent *event) override;
+private:
+    LayoutScheme *m_layout;
+    Node *m_node;
+};
 
 #endif // MAINWINDOW_H

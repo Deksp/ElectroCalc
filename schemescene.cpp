@@ -12,6 +12,12 @@ SchemeScene::SchemeScene()
     setMode(m_mode);
 }
 
+SchemeScene::~SchemeScene()
+{
+    delete m_insertedItem;
+    delete m_layoutScheme;
+}
+
 LayoutScheme *SchemeScene::getLayoutSchem() const
 {
     return m_layoutScheme;
@@ -332,6 +338,15 @@ void SchemeScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
             setMode(m_mode);
         }
     }
+}
+
+void SchemeScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
+{
+    if (itemAt(event->scenePos(), QTransform()) != nullptr)
+        if (itemAt(event->scenePos(), QTransform())->parentItem() != nullptr)
+            if (itemAt(event->scenePos(), QTransform())->parentItem()->type() == SchemeItem::TypeGeneratorItem)
+                emit input(m_layoutScheme,
+                           static_cast<SchemeItem*>(itemAt(event->scenePos(), QTransform())->parentItem())->getNode());
 }
 
 void SchemeScene::clearScene()

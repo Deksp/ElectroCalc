@@ -13,6 +13,18 @@ LayoutScheme::LayoutScheme()
     m_load.resize(0);
 }
 
+LayoutScheme::~LayoutScheme()
+{
+    for (auto it : m_vertex)
+        delete it;
+    for (auto it : m_generator)
+        delete it;
+    for (auto it : m_branch)
+        delete it;
+    for (auto it : m_load)
+        delete it;
+}
+
 Node *LayoutScheme::addVertex()
 {
     m_vertex << new VertexNode;
@@ -26,6 +38,7 @@ Node *LayoutScheme::addGenerator()
     m_generator << new GeneratorNode;
     m_generator.last()->setId(m_generator.size());
     m_generator.last()->setIndex("E"+QString().setNum(m_generator.size()));
+    m_generator.last()->setVoltage(220);
     return m_generator.last();
 }
 
@@ -91,6 +104,11 @@ void LayoutScheme::deleteBranch(Node *node, Node *linkNode)
 void LayoutScheme::deleteNode(Node *node)
 {
 
+}
+
+complexnum LayoutScheme::getVoltage(Node *generator) const
+{
+    return static_cast<GeneratorNode*>(generator)->getVoltage();
 }
 
 QVector<LayoutScheme::VertexNode *> LayoutScheme::getVertexes() const
@@ -242,7 +260,11 @@ QString LayoutScheme::VertexNode::getStringTypeNodeProperty() const
 
 Node *LayoutScheme::VertexNode::getAssignedNode(Node *node)
 {
-    if (node->type() != Node::TypeGenBranchNode ||
+    if (node == nullptr)
+        return nullptr;
+    if (!m_branch.contains(static_cast<BranchNode*>(node)))
+        return nullptr;
+    if (node->type() != Node::TypeGenBranchNode &&
             node->type() != Node::TypeBranchNode)
         return nullptr;
     if (static_cast<BranchNode*>(node)->getFirstNode() == this)
@@ -262,6 +284,11 @@ void LayoutScheme::GeneratorNode::setVoltage(double voltage)
     m_voltage = voltage;
 }
 
+double LayoutScheme::GeneratorNode::getVoltage() const
+{
+    return m_voltage;
+}
+
 int LayoutScheme::GeneratorNode::type() const
 {
     return TypeGeneratorNode;
@@ -270,9 +297,9 @@ int LayoutScheme::GeneratorNode::type() const
 Node *LayoutScheme::GeneratorNode::getAssignedNode(Node *node)
 {
     Q_UNUSED(node)
-    if (m_branch.at(0)->getFirstNode()->type() == TypeGeneratorNode)
-        return m_branch.at(0)->getFirstNode();
-    return m_branch.at(0)->getSecondNode();
+    if (m_branch.at(0)->getFirstNode() == this)
+        return m_branch.at(0)->getSecondNode();
+    return m_branch.at(0)->getFirstNode();
 }
 
 complexnum LayoutScheme::GeneratorNode::getTypeNodeProperty() const

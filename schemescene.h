@@ -22,6 +22,7 @@ public:
     };
 
     SchemeScene();
+    ~SchemeScene();
     LayoutScheme *getLayoutSchem() const;
 
 public slots:
@@ -34,6 +35,7 @@ public slots:
 
 signals:
     void unChekButton();
+    void input(LayoutScheme *layout, Node *node);
 
 private:
     LayoutScheme *m_layoutScheme;
@@ -50,6 +52,7 @@ protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
+    void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) override;
 };
 
 #endif // SCHEMSCENE_H

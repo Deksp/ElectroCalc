@@ -6,9 +6,18 @@ Calculation::Calculation()
 
 }
 
+Calculation::~Calculation()
+{
+    for (auto ver : m_Z)
+    {
+        for (MutualVals::iterator t=ver.begin();t!=ver.end();++t)
+            delete t.key();
+    }
+}
+
 void Calculation::startingCalculations(LayoutScheme *layout)
 {
-    OUTCHECK(layout);
+    m_layout = layout;
     uint size = layout->getVertexes().size();
     m_condactionMatrix.resize(size);
     m_invcondactionMatrix.resize(size);
@@ -35,17 +44,110 @@ void Calculation::startingCalculations(LayoutScheme *layout)
         }
     }
     inverse();
-    qDebug()<<"catch37";
-    Zcalc(layout);
-    qDebug()<<"catch39";
-    Icalc(layout);
-    //OUT(layout);
+    Zcalc();
+    Icalc();
+    out();
 }
 
-Calculation::MutualPair::MutualPair(Node *node, Node *mutualNode, Mutual_Type mutualtype)
-    :  node(node), mutualNode(mutualNode), mutualType(mutualtype)
+void Calculation::endCalculations()
 {
 
+    m_condactionMatrix.clear();
+    m_invcondactionMatrix.clear();
+    for (auto ver : m_Z)
+    {
+        for (MutualVals::iterator t=ver.begin();t!=ver.end();++t)
+            delete t.key();
+    }
+    m_Z.clear();
+    I_first.clear();
+    I_final.clear();
+    m_layout = nullptr;
+}
+
+void Calculation::createTree(QTreeWidget *tree)
+{
+    QList<QTreeWidgetItem *> topicsItems;
+    QVector<QStringList> topics;
+    topics << QStringList(QString(QObject::tr("Condactions matrix")))<< QStringList(QString(QObject::tr("Reverse Condactions matrix")))
+              << QStringList(QString(QObject::tr("Mutual condactions")))<< QStringList(QString(QObject::tr("Mutual currents")))
+                 << QStringList(QString(QObject::tr("Curents")))<< QStringList(QString(QObject::tr("Check")));
+    for (auto i : topics)
+        topicsItems.append(new QTreeWidgetItem(i));
+    tree->insertTopLevelItems(0, topicsItems);
+
+    QList<QTreeWidgetItem *> CondactionsMatrix;
+    QString rows;
+    for (auto i : m_condactionMatrix)
+    {
+        QString colums;
+        for (auto j : i)
+            colums += conver(j) + "; ";
+        rows += colums + "\n";
+    }
+    CondactionsMatrix.append(new QTreeWidgetItem(topicsItems[0], QStringList(QString(rows))));
+
+    QList<QTreeWidgetItem *> ReverseCondactionsMatrix;
+    rows.clear();
+    for (auto i : m_invcondactionMatrix)
+    {
+        QString colums;
+        for (auto j : i)
+            colums += conver(j) + "; ";
+        rows += colums + "\n";
+    }
+    ReverseCondactionsMatrix.append(new QTreeWidgetItem(topicsItems[1], QStringList(QString(rows))));
+
+    QList<QTreeWidgetItem *> VertexesMutualCondactions;
+    int i = 0;
+    for  (auto vertex : m_Z)
+    {
+        VertexesMutualCondactions.append(new QTreeWidgetItem(topicsItems[2], QStringList(QString(QObject::tr("Vertex %1")).arg(1 + i))));
+        QList<QTreeWidgetItem *> mutualCondactions;
+        for (MutualVals::iterator z=vertex.begin();z!=vertex.end();++z)
+            mutualCondactions.append(new QTreeWidgetItem(VertexesMutualCondactions[i],
+                                     QStringList(QString(Zname(z.key(), m_layout->getVertex(i)) + " = " + conver(z.value())))));
+        ++i;
+    }
+    i = 0;
+    QList<QTreeWidgetItem *> VertexesMutualCurrents;
+    for  (auto vertex : I_first)
+    {
+        VertexesMutualCurrents.append(new QTreeWidgetItem(topicsItems[3], QStringList(QString(QObject::tr("Vertex %1")).arg(1 + i))));
+        QList<QTreeWidgetItem *> mutualCurrents;
+        for (MutualVals::iterator I=vertex.begin();I!=vertex.end();++I)
+            mutualCurrents.append(new QTreeWidgetItem(VertexesMutualCurrents[i],
+                                     QStringList(QString(Iname(I.key(), m_layout->getVertex(i)) + " = " + conver(I.value()) + "A"))));
+        ++i;
+    }
+    i = 0;
+    QList<QTreeWidgetItem *> VertexesCurrents;
+    for  (auto vertex : I_final)
+    {
+        VertexesCurrents.append(new QTreeWidgetItem(topicsItems[4], QStringList(QString(QObject::tr("Vertex %1")).arg(1 + i))));
+        QList<QTreeWidgetItem *> Currents;
+        for (QMap<QString, complexnum>::iterator I=vertex.begin();I!=vertex.end();++I)
+            Currents.append(new QTreeWidgetItem(VertexesCurrents[i],
+                                                 QStringList(I.key() + " = " + conver(I.value()) + "A")));
+        ++i;
+    }
+    i = 0;
+    QList<QTreeWidgetItem *> CheckVertexesCurrents;
+    for  (auto vertex : I_final)
+    {
+        CheckVertexesCurrents.append(new QTreeWidgetItem(topicsItems[5], QStringList(QString(QObject::tr("Vertex %1")).arg(1 + i))));
+        QList<QTreeWidgetItem *> CheckCurrents;
+        complexnum num;
+        for (QMap<QString, complexnum>::iterator I=vertex.begin();I!=vertex.end();++I)
+            num += I.value();
+        CheckCurrents.append(new QTreeWidgetItem(CheckVertexesCurrents[i],
+                                                 QStringList(QObject::tr("Amount without rounding\n ") + conver(num))));
+        CheckCurrents.append(new QTreeWidgetItem(CheckVertexesCurrents[i],
+                                                 QStringList(QObject::tr("The amount with rounding\nto the third digit\n ") +
+                                                             QString::number(num.real(), 'f', 3) +
+                                                             " + " + QString::number(num.imag(), 'f', 3) + "i")));
+        ++i;
+    }
 }
 
 void Calculation::inverse()
@@ -116,177 +218,256 @@ void Calculation::inverse()
     delete [] matrix;
 }
 
-void Calculation::OUTCHECK(LayoutScheme *layout)
+void Calculation::out()
 {
-    qDebug()<<"OUTCHECK";
-    for (auto ver : layout->getVertexes())
+    for (auto i : m_condactionMatrix)
     {
-        qDebug()<<ver;
-        for (auto load : ver->getLoads())
-            qDebug().space()<<load;
-        for (auto branch : ver->getBranchs())
-        {
-            qDebug().space()<< branch;
-            qDebug().space().space()<<branch->getFirstNode();
-            qDebug().space().space()<<branch->getSecondNode();
-        }
-        qDebug()<<" ";
+        QString out;
+        for (auto j : i)
+            out = out + QString("(%1,%2)").arg(QString::number(j.real()),QString::number(j.imag()));
+        qDebug().noquote()<<out;
     }
-    for (auto gen : layout->getGenerators())
+    qDebug()<<" ";
+    for (auto i : m_invcondactionMatrix)
     {
-        qDebug()<<gen;
-        for (auto branch : gen->getBranchs())
-            qDebug().space()<< branch;
+        QString out;
+        for (auto j : i)
+            out = out + QString("(%1,%2)").arg(QString::number(j.real()),QString::number(j.imag()));
+        qDebug().noquote()<<out;
     }
-    qDebug()<<"OUTCHECK";
-}
-
-void Calculation::OUT(LayoutScheme *layout)
-{
+    qDebug()<<" ";
+    int i =0;
     for (auto ver : m_Z)
     {
         for (MutualVals::iterator t=ver.begin();t!=ver.end();++t)
-            qDebug()<<t.key()->mutualType<<t.value().real();
+            qDebug().noquote()<<Zname(t.key(), m_layout->getVertex(i))<<t.value().real()<<t.value().imag();
         qDebug()<<"  ";
+        i++;
+    }
+    qDebug()<<" ";
+    i =0;
+    for (auto ver : I_first)
+    {
+        for (MutualVals::iterator t=ver.begin();t!=ver.end();++t)
+            qDebug().noquote()<<Iname(t.key(), m_layout->getVertex(i))<<t.value().real()<<t.value().imag();
+        qDebug()<<"  ";
+        i++;
+    }
+    qDebug()<<" ";
+    i =0;
+    for (auto ver : I_final)
+    {
+        for (QMap<QString, complexnum>::iterator t=ver.begin();t!=ver.end();++t)
+            qDebug().noquote()<<t.key()<<t.value().real()<<t.value().imag();
+        qDebug()<<"  ";
+        i++;
     }
 }
 
-void Calculation::Zcalc(LayoutScheme *layout)
+void Calculation::Zcalc()
 {
-    for (auto vertex : layout->getVertexes())
+    for (auto vertex : m_layout->getVertexes())
     {
         MutualVals mutualVals;
-        for (auto generator : layout->getGenerators())
+        for (auto generator : m_layout->getGenerators())
         {
             if (vertex->isLink(generator))
             {
-                MutualPair pairgen(generator,generator,gen);
-                mutualVals.insert(&pairgen, Z(pairgen,vertex));
-
-                for (auto mutualGenerator : layout->getGenerators())
+                MutualPair *pairgen = new MutualPair{generator,generator,gen};
+                mutualVals.insert(pairgen, Z(*pairgen,vertex));
+                for (auto mutualGenerator : m_layout->getGenerators())
                 {
                     if (mutualGenerator == generator)
                         continue;
-                    MutualPair pairgengen(generator,mutualGenerator,gengen);
-                    mutualVals.insert(&pairgengen, Z(pairgengen, vertex));
+                    MutualPair *pairgengen= new MutualPair{generator,mutualGenerator,gengen};
+                    mutualVals.insert(pairgengen, Z(*pairgengen, vertex));
                 }
                 for (auto branch : vertex->getBranchs())
                     if (branch->type() != Node::TypeGenBranchNode)
                     {
-                        MutualPair pairbranch(branch,generator,branchgen);
-                        mutualVals.insert(&pairbranch, Z(pairbranch, vertex));
+                        MutualPair *pairbranch= new MutualPair{branch,generator,branchgen};
+                        mutualVals.insert(pairbranch, Z(*pairbranch, vertex));
                     }
             }
             else
                 for (auto branch : vertex->getBranchs())
                     if (branch->type() != Node::TypeGenBranchNode)
                     {
-                        MutualPair pairbranch(branch,generator,branchgen);
-                        mutualVals.insert(&pairbranch, Z(pairbranch, vertex));
+                        MutualPair *pairbranch= new MutualPair{branch,generator,branchgen};
+                        mutualVals.insert(pairbranch, Z(*pairbranch, vertex));
                     }
             for (auto load : vertex->getLoads())
                 if (load->getResistance() != complexnum(0))
                 {
-                    MutualPair pairload(load,generator,loadgen);
-                    mutualVals.insert(&pairload, Z(pairload, vertex));
+                    MutualPair *pairload= new MutualPair{load,generator,loadgen};
+                    mutualVals.insert(pairload, Z(*pairload, vertex));
                 }
         }
         m_Z << mutualVals;
     }
 }
 
-void Calculation::Icalc(LayoutScheme *layout)
+void Calculation::Icalc()
 {
-
+    for (auto Zcondaction : m_Z)
+    {
+        MutualVals map;
+        for (MutualVals::iterator it=Zcondaction.begin();it!=Zcondaction.end();++it)
+        {
+            switch (it.key()->m_mutualType)
+            {
+            case gen:
+                map.insert(it.key(), m_layout->getVoltage(it.key()->m_node)
+                                                /
+                                            it.value());
+                break;
+            case gengen:
+                map.insert(it.key(), m_layout->getVoltage(it.key()->m_mutualNode)
+                                                /
+                                            it.value());
+                break;
+            case branchgen:
+                map.insert(it.key(), m_layout->getVoltage(it.key()->m_mutualNode)
+                                                /
+                                            it.value());
+                break;
+            case loadgen:
+                map.insert(it.key(), m_layout->getVoltage(it.key()->m_mutualNode)
+                                                /
+                                            it.value());
+                break;
+            }
+        }
+        I_first << map;
+    }
+    int vertexid_1 = 0;
+    for (auto Icurrent : I_first)
+    {
+        QMap<QString, complexnum> map;
+        for (MutualVals::iterator it=Icurrent.begin();it!=Icurrent.end();++it)
+        {
+                map[Ifinalname(it.key(), m_layout->getVertex(vertexid_1))] +=
+                        it.value();
+        }
+        I_final << map;
+        vertexid_1++;
+    }
 }
 
-QString Calculation::Zname(Calculation::MutualPair &pair, Node *currentNode)
+QString Calculation::conver(const complexnum &num)
 {
-    switch (pair.mutualType)
+    if(num.imag()>=0)
+        return QString("%1+%2i").arg(QString::number(num.real()), QString::number(num.imag()));
+    return QString("%1%2i").arg(QString::number(num.real()), QString::number(num.imag()));
+}
+
+QString Calculation::Zname(Calculation::MutualPair *pair, Node *currentNode)
+{
+    switch (pair->m_mutualType)
     {
     case gen:
-        return QString("Z(%1,%1)").arg(pair.node->getIndex());
+        return QString("Z(%1,%1)").arg(pair->m_node->getIndex());
         break;
     case gengen:
-        return QString("Z(%1,%2)").arg(pair.node->getIndex(),
-                                       pair.mutualNode->getIndex());
+        return QString("Z(%1,%2)").arg(pair->m_node->getIndex(),
+                                       pair->m_mutualNode->getIndex());
         break;
     case branchgen:
         return QString("Z(%1->%2;%3)").arg(
                     currentNode->getIndex(),
-                    pair.node->getAssignedNode(currentNode)->getIndex(),
-                    pair.mutualNode->getIndex());
+                    pair->m_node->getAssignedNode(currentNode)->getIndex(),
+                    pair->m_mutualNode->getIndex());
         break;
     case loadgen:
         return QString("Z(%1[%2];%3)").arg(
                             currentNode->getIndex(),
-                            QString::number(pair.node->getId()),
-                            pair.mutualNode->getIndex());
+                            QString::number(pair->m_node->getId()),
+                            pair->m_mutualNode->getIndex());
         break;
     }
 
 }
 
-QString Calculation::Iname(Calculation::MutualPair &pair, Node *currentNode)
+QString Calculation::Iname(Calculation::MutualPair *pair, Node *currentNode)
 {
-    switch (pair.mutualType)
+    switch (pair->m_mutualType)
     {
     case gen:
-        return QString("Z(%1,%1)").arg(pair.node->getIndex());
+        return QString("I(%1,%1)").arg(pair->m_node->getIndex());
         break;
     case gengen:
-        return QString("Z(%1,%2)").arg(pair.node->getIndex(),
-                                       pair.mutualNode->getIndex());
+        return QString("I(%1,%2)").arg(pair->m_node->getIndex(),
+                                       pair->m_mutualNode->getIndex());
         break;
     case branchgen:
-        return QString("Z(%1->%2;%3)").arg(
+        return QString("I(%1->%2;%3)").arg(
                     currentNode->getIndex(),
-                    pair.node->getAssignedNode(currentNode)->getIndex(),
-                    pair.mutualNode->getIndex());
+                    pair->m_node->getAssignedNode(currentNode)->getIndex(),
+                    pair->m_mutualNode->getIndex());
         break;
     case loadgen:
-        return QString("Z(%1[%2];%3)").arg(
+        return QString("I(%1[%2];%3)").arg(
                             currentNode->getIndex(),
-                            QString::number(pair.node->getId()),
-                            pair.mutualNode->getIndex());
+                            QString::number(pair->m_node->getId()),
+                            pair->m_mutualNode->getIndex());
+        break;
+    }
+}
+
+QString Calculation::Ifinalname(Calculation::MutualPair *pair, Node *currentNode)
+{
+    switch (pair->m_mutualType)
+    {
+    case gen:
+    case gengen:
+        return QString("I(%1)").arg(pair->m_node->getIndex());
+        break;
+    case branchgen:
+        return QString("I(%1->%2)").arg(
+                    currentNode->getIndex(),
+                    pair->m_node->getAssignedNode(currentNode)->getIndex());
+        break;
+    case loadgen:
+        return QString("I(%1[%2])").arg(
+                            currentNode->getIndex(),
+                            QString::number(pair->m_node->getId()));
         break;
     }
 }
 
 complexnum Calculation::Z(const MutualPair &pair, Node *currentNode)
 {
-    switch (pair.mutualType)
+    switch (pair.m_mutualType)
     {
     case gen:
         return
-      pair.node->getTypeNodeProperty() * pair.node->getTypeNodeProperty()
+      pair.m_node->getTypeNodeProperty() * pair.m_node->getTypeNodeProperty()
                                 /
-(pair.node->getTypeNodeProperty() + m_invcondactionMatrix[pair.node->getAssignedNode()->getId()-1]
-                                        [pair.node->getAssignedNode()->getId()-1]);
+(pair.m_node->getTypeNodeProperty() + m_invcondactionMatrix[pair.m_node->getAssignedNode()->getId()-1]
+                                        [pair.m_node->getAssignedNode()->getId()-1]);
         break;
     case gengen:
         return
-   (pair.node->getTypeNodeProperty() * pair.mutualNode->getTypeNodeProperty())
+   (pair.m_node->getTypeNodeProperty() * pair.m_mutualNode->getTypeNodeProperty())
                                  /
-     m_invcondactionMatrix[pair.node->getAssignedNode()->getId()-1]
-                            [pair.mutualNode->getAssignedNode()->getId()-1];
+     m_invcondactionMatrix[pair.m_node->getAssignedNode()->getId()-1]
+                            [pair.m_mutualNode->getAssignedNode()->getId()-1];
         break;
     case branchgen:
         return
-       (pair.node->getTypeNodeProperty() * pair.mutualNode->getTypeNodeProperty())
+       (pair.m_node->getTypeNodeProperty() * pair.m_mutualNode->getTypeNodeProperty())
                                        /
     (m_invcondactionMatrix[currentNode->getId()-1]
-                          [pair.mutualNode->getAssignedNode()->getId()-1] -
-                m_invcondactionMatrix[pair.mutualNode->getAssignedNode()->getId()-1]
-                                     [pair.mutualNode->getAssignedNode()->getId()-1]);
+                          [pair.m_mutualNode->getAssignedNode()->getId()-1] -
+                m_invcondactionMatrix[pair.m_node->getAssignedNode(currentNode)->getId()-1]
+                                     [pair.m_mutualNode->getAssignedNode()->getId()-1]);
         break;
     case loadgen:
         return
-          (pair.node->getTypeNodeProperty() * pair.mutualNode->getTypeNodeProperty())
+          (pair.m_node->getTypeNodeProperty() * pair.m_mutualNode->getTypeNodeProperty())
                                /
       m_invcondactionMatrix[currentNode->getId()-1]
-                                   [pair.mutualNode->getAssignedNode()->getId()-1];
+                                   [pair.m_mutualNode->getAssignedNode()->getId()-1];
         break;
-    }qDebug()<<"catch";
+    }
 }
-

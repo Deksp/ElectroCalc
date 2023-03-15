@@ -241,7 +241,8 @@ void GeneratorItem::paint(QPainter *painter,
     painter->drawText(m_rect, Qt::AlignCenter, "Е" + m_index);
     font.setPointSize(8);
     painter->setFont(font);
-    painter->drawText(QRectF(-26.5, 13, 53, 10), Qt::AlignCenter, "220 v");
+    if (m_node != nullptr)
+        painter->drawText(QRectF(-26.5, 13, 53, 10), Qt::AlignCenter, m_node->getStringTypeNodeProperty());
 }
 
 //--------------------------------------------------------------------------
@@ -372,7 +373,7 @@ void BranchItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option
 
 void BranchItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
-
+    Q_UNUSED(event)
 }
 
 int BranchItem::type() const

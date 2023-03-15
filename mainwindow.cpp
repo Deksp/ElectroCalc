@@ -5,6 +5,10 @@
 #include <QAction>
 #include <QToolBar>
 #include <QButtonGroup>
+#include <QDockWidget>
+#include <QTreeWidgetItem>
+#include <QTreeWidget>
+#include <QKeyEvent>
 
 extern QString tabStyle;
 
@@ -18,6 +22,7 @@ MainWindow::MainWindow(QWidget *parent)
     view << new ViewScheme;
     view.first()->setScene(scene.first());
     connect(scene.first(), &SchemeScene::unChekButton, this, &MainWindow::unCheckButtonGroup);
+    connect(scene.first(), &SchemeScene::input, this, &MainWindow::inputWidgetShow);
 
     createActions();
     createMenuBar();
@@ -183,9 +188,25 @@ void MainWindow::unCheckButtonGroup()
 
 void MainWindow::Calc()
 {
-
     calc.startingCalculations(getCurrentScene()->getLayoutSchem());
 
+    QDockWidget *info = new QDockWidget(tr("Information about current scheme"),this);
+    info->setMinimumWidth(250);
+
+    QTreeWidget *treeWidget  = new QTreeWidget();
+    treeWidget->setColumnCount(1);
+    calc.createTree(treeWidget);
+
+    info->setWidget(treeWidget);
+    addDockWidget(Qt::RightDockWidgetArea, info);
+
+    calc.endCalculations();
+}
+
+void MainWindow::inputWidgetShow(LayoutScheme *layout, Node *node)
+{
+    InputWidget *input = new InputWidget(layout, node);
+    input->show();
 }
 
 void MainWindow::buttonGroupClicked(QAbstractButton *sender, bool cheked)
@@ -227,6 +248,34 @@ QWidget *AddButton::createCellWidget()
     QWidget *cellWidget = new QWidget;
     cellWidget->setLayout(layout);
     return cellWidget;
+}
+
+InputWidget::InputWidget(LayoutScheme *layout, Node *node)
+    : QLineEdit(), m_layout(layout), m_node(node)
+{
+
+}
+
+void InputWidget::keyPressEvent(QKeyEvent *event)
+{
+    if(event->key() == Qt::Key_Enter || event->key() == Qt::Key_Return)
+    {
+        switch (m_node->type())
+        {
+        case Node::TypeGeneratorNode:
+            m_layout->setVoltage(m_node, text().toDouble());
+            break;
+        case Node::TypeBranchNode:
+            //m_layout->setBranch(m_node, text().)
+            break;
+        case Node::TypeLoadNode:
+
+            break;
+        }
+        this->~InputWidget();
+    }
+    else
+        QLineEdit::keyPressEvent(event);
 }
 
 QString tabStyle =
@@ -320,6 +369,8 @@ QString tabStyle =
                                    QTabBar::tab:left:only-one, QTabBar::tab:right:only-one {
                                        margin-bottom: 0;
         })SONG";
+
+
 
 
 

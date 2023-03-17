@@ -168,29 +168,47 @@ void SchemeScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
                 (item->parentItem()->type() == SchemeItem::TypeVertexItem ||
                 item->parentItem()->type() == SchemeItem::TypeGeneratorItem))
             {
-                if (stage && !m_insertedItem->isBlock())
+                if (!static_cast<SchemeItem*>(item->parentItem())->isStage())
                 {
-                    static_cast<BranchItem*>(m_insertedItem)->setStage(true);
-                    static_cast<BranchItem*>(m_insertedItem)->
-                            setEndItem(static_cast<SchemeItem*>(item->parentItem()));
-                    static_cast<VertexItem*>(item->parentItem())->
-                            addBranch(static_cast<BranchItem*>(m_insertedItem));
-                    m_insertedItem->setNode(m_layoutScheme->addBranch(
-                                                static_cast<BranchItem*>(m_insertedItem)->getStartItem()->getNode(),
-                                                static_cast<BranchItem*>(m_insertedItem)->getEndItem()->getNode()));
-                    m_insertedItem->setAllowed(false);
-                    m_insertedItem = nullptr;
-                    stage = false;
-                    setMode(m_mode);
-                }
-                else if (!stage)
-                {
-                    m_insertedItem = new BranchItem(static_cast<SchemeItem*>(item->parentItem()),
-                                                    m_layoutScheme->getDefResistance());
-                    static_cast<VertexItem*>(item->parentItem())->
-                            addBranch(static_cast<BranchItem*>(m_insertedItem));
-                    addItem(m_insertedItem);
-                    stage = true;
+                    if (stage && !m_insertedItem->isBlock())
+                    {
+                        Node *branch;
+                        branch = m_layoutScheme->addBranch(
+                                    static_cast<BranchItem*>(m_insertedItem)->getStartItem()->getNode(),
+                                    static_cast<SchemeItem*>(item->parentItem())->getNode());
+                        if (branch == nullptr)
+                        {
+                            m_insertedItem->setAllowed(false);
+                            static_cast<VertexItem*>(static_cast<BranchItem*>(m_insertedItem)->getStartItem())->
+                                    removeBranch(static_cast<BranchItem*>(m_insertedItem));
+                            static_cast<BranchItem*>(m_insertedItem)->getStartItem()->setStage(false);
+                            removeItem(m_insertedItem);
+                            m_insertedItem = nullptr;
+                            stage = false;
+                            setMode(m_mode);
+                            break;
+                        }
+
+                        static_cast<BranchItem*>(m_insertedItem)->setStage(true);
+                        static_cast<BranchItem*>(m_insertedItem)->
+                                setEndItem(static_cast<SchemeItem*>(item->parentItem()));
+                        static_cast<VertexItem*>(item->parentItem())->
+                                addBranch(static_cast<BranchItem*>(m_insertedItem));
+                        m_insertedItem->setNode(branch);
+                        m_insertedItem->setAllowed(false);
+                        m_insertedItem = nullptr;
+                        stage = false;
+                        setMode(m_mode);
+                    }
+                    else if (!stage)
+                    {
+                        m_insertedItem = new BranchItem(static_cast<SchemeItem*>(item->parentItem()),
+                                                        m_layoutScheme->getDefResistance());
+                        static_cast<VertexItem*>(item->parentItem())->
+                                addBranch(static_cast<BranchItem*>(m_insertedItem));
+                        addItem(m_insertedItem);
+                        stage = true;
+                    }
                 }
             }
         }
@@ -202,6 +220,12 @@ void SchemeScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
 
     case Qt::RightButton:
         stage = false;
+        if (m_mode == InsertBranch && m_insertedItem != nullptr)
+        {
+            static_cast<VertexItem*>(static_cast<BranchItem*>(m_insertedItem)->getStartItem())->
+                removeBranch(static_cast<BranchItem*>(m_insertedItem));
+            static_cast<BranchItem*>(m_insertedItem)->getStartItem()->setStage(false);
+        }
         setMode(Select);
         break;
 
@@ -281,7 +305,6 @@ void SchemeScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
                 m_insertedItem->setBlock(false);
                 m_insertedItem->setAllowed(false);
                 m_insertedItem->update();
-                //qDebug()<<m_insertedItem->isAllowed();
             }
             if (!static_cast<BranchItem*>(m_insertedItem)->isStage())
             {
@@ -348,7 +371,7 @@ void SchemeScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
                     itemAt(event->scenePos(), QTransform())->parentItem()->type() == SchemeItem::TypeBranchItem ||
                     itemAt(event->scenePos(), QTransform())->parentItem()->type() == SchemeItem::TypeLoadItem)
                 emit input(m_layoutScheme,
-                           static_cast<SchemeItem*>(itemAt(event->scenePos(), QTransform())->parentItem())->getNode(), event);
+                           static_cast<SchemeItem*>(itemAt(event->scenePos(), QTransform())->parentItem())->getNode());
 }
 
 void SchemeScene::clearScene()

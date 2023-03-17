@@ -9,13 +9,13 @@
 #include <QTreeWidgetItem>
 #include <QTreeWidget>
 #include <QKeyEvent>
-#include <QGraphicsSceneMouseEvent>
 
 extern QString tabStyle;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
-      mainLayout(new QHBoxLayout)
+      mainLayout(new QHBoxLayout),
+      layoutScheme(nullptr)
 {
     createToolGroup();
 
@@ -39,7 +39,7 @@ MainWindow::MainWindow(QWidget *parent)
     centralWidget->setLayout(mainLayout);
     setCentralWidget(centralWidget);
     setWindowTitle(tr("ElectroCalc"));
-    setGeometry(300,200,1600,1000);
+    setGeometry(100,100,800,500);
 
     fileToolBar->setEnabled(false);
     editToolBar->setEnabled(false);
@@ -47,6 +47,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
+
 }
 
 void MainWindow::createToolBar()
@@ -204,10 +205,9 @@ void MainWindow::Calc()
     calc.endCalculations();
 }
 
-void MainWindow::inputWidgetShow(LayoutScheme *layout, Node *node, QGraphicsSceneMouseEvent *event)
+void MainWindow::inputWidgetShow(LayoutScheme *layout, Node *node)
 {
-    InputWidget *input = new InputWidget(layout, node);
-    //input->setGeometry(event->scenePos().x(), event->scenePos().y(), input->width(),input->height());
+    InputWidget *input = new InputWidget(layout, node, this);
     input->show();
 }
 
@@ -252,10 +252,13 @@ QWidget *AddButton::createCellWidget()
     return cellWidget;
 }
 
-InputWidget::InputWidget(LayoutScheme *layout, Node *node)
-    : QLineEdit(), m_layout(layout), m_node(node)
+InputWidget::InputWidget(LayoutScheme *layout, Node *node, QWidget *parent)
+    : QDialog(parent), m_layout(layout), m_node(node), lineEdit(this)
 {
-
+    QGridLayout *layoutWidget = new QGridLayout;
+    layoutWidget->addWidget(&lineEdit);
+    layoutWidget->setMargin(0);
+    setLayout(layoutWidget);
 }
 
 void InputWidget::keyPressEvent(QKeyEvent *event)
@@ -265,24 +268,27 @@ void InputWidget::keyPressEvent(QKeyEvent *event)
         switch (m_node->type())
         {
         case Node::TypeGeneratorNode:
-            m_layout->setVoltage(m_node, text().toDouble());
+            m_layout->setVoltage(m_node, lineEdit.text().toDouble());
             break;
         case Node::TypeBranchNode:
-            m_layout->setBranch(m_node, convert(text()));
+        case Node::TypeGenBranchNode:
+            m_layout->setBranch(m_node, convert(lineEdit.text()));
             break;
         case Node::TypeLoadNode:
-            m_layout->setLoad(m_node, convert(text()));
+            m_layout->setLoad(m_node, convert(lineEdit.text()));
             break;
         }
         this->~InputWidget();
     }
     else
-        QLineEdit::keyPressEvent(event);
+        QDialog::keyPressEvent(event);
 }
 
 complexnum InputWidget::convert(const QString &text)
 {
-    QStringList textNew = text.split(u',');
+    if (!text.contains(','))
+        return complexnum(text.toDouble());
+    QStringList textNew = text.split(',');
     return complexnum(textNew[0].toDouble(), textNew[1].toDouble());
 }
 

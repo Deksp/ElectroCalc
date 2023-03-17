@@ -126,8 +126,8 @@ public:
     BranchItem(SchemeItem *const strartItem, SchemeItem *const endItem, const QString &resistsnce);
     int type() const override;
 
-    const SchemeItem *getStartItem() const;
-    const SchemeItem *getEndItem() const;
+    SchemeItem *getStartItem() const;
+    SchemeItem *getEndItem() const;
 
     void moveStartPoint(const QPointF &start);
     void moveEndPoint(const QPointF &end);

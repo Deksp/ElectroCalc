@@ -137,12 +137,18 @@ int VertexItem::type() const
 
 void VertexItem::removeBranch(BranchItem *branch)
 {
-
+    for (int i=0; i < m_branch.size(); i++)
+        if (m_branch[i] == branch)
+        {
+            m_branch.remove(i);
+            break;
+        }
 }
 
 void VertexItem::removeBranchs()
 {
-
+    for (int i=0; i < m_branch.size(); i++)
+        m_branch.remove(i);
 }
 
 void VertexItem::addBranch(BranchItem *branch)
@@ -381,12 +387,12 @@ int BranchItem::type() const
     return TypeBranchItem;
 }
 
-const SchemeItem *BranchItem::getStartItem() const
+SchemeItem *BranchItem::getStartItem() const
 {
     return m_startItem;
 }
 
-const SchemeItem *BranchItem::getEndItem() const
+SchemeItem *BranchItem::getEndItem() const
 {
     return m_endItem;
 }

@@ -44,7 +44,9 @@ Node *LayoutScheme::addGenerator()
 
 Node *LayoutScheme::addBranch(Node *firstNode, Node *secondNode)
 {
-    if (firstNode == secondNode)
+    if (firstNode == secondNode ||
+            (firstNode->type() == Node::TypeGeneratorNode &&
+             secondNode->type() == Node::TypeGeneratorNode))
         return nullptr;
     if (firstNode->type() == Node::TypeGeneratorNode ||
             secondNode->type() == Node::TypeGeneratorNode)

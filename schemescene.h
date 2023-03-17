@@ -35,7 +35,7 @@ public slots:
 
 signals:
     void unChekButton();
-    void input(LayoutScheme *layout, Node *node, QGraphicsSceneMouseEvent *event);
+    void input(LayoutScheme *layout, Node *node);
 
 private:
     LayoutScheme *m_layoutScheme;

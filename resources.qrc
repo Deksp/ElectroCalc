@@ -18,5 +18,10 @@
         <file>images/select.png</file>
         <file>images/gridVisible.png</file>
         <file>images/grid.png</file>
+        <file>images/clean.png</file>
+        <file>images/def_values.png</file>
+        <file>images/delete.png</file>
+        <file>images/accept.png</file>
+        <file>images/inverseCondaction.png</file>
     </qresource>
 </RCC>

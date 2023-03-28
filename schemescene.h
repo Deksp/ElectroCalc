@@ -24,18 +24,24 @@ public:
     SchemeScene();
     ~SchemeScene();
     LayoutScheme *getLayoutSchem() const;
+    const QString getSchemeName() const;
+    void setSchemeName(const QString &name);
+
+    friend QDataStream& operator<<(QDataStream &out, SchemeScene &scene);
+    friend QDataStream& operator>>(QDataStream &in, SchemeScene &scene);
 
 public slots:
     void turn();
     void clearScene();
     void removeSelectedItems();
     void setMode(Mode mode);
+    void setSetingDefaultVal(bool state);
     void setGridBinding(bool gridBinding);
     QPointF gridPoint(QPointF point);
 
 signals:
     void unChekButton();
-    void input(LayoutScheme *layout, Node *node);
+    void input(LayoutScheme *layout, Node *node, const QPoint &pos);
 
 private:
     LayoutScheme *m_layoutScheme;
@@ -45,8 +51,10 @@ private:
     static const quint16 m_sceneSize = 8060;
 
     bool m_gridBinging;
+    bool m_setingDefaultVal;
     Mode m_mode;
     SchemeItem *m_insertedItem;
+    QString schemeName;
 
 protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;

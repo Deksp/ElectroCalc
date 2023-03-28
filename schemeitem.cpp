@@ -59,6 +59,16 @@ Node *SchemeItem::getNode() const
     return m_node;
 }
 
+QDataStream &operator>>(QDataStream &in, SchemeItem &item)
+{
+    return in;
+}
+
+QDataStream &operator<<(QDataStream &out, SchemeItem &item)
+{
+    return out;
+}
+
 void SchemeItem::setStage(bool stage)
 {
     m_stage = stage;
@@ -248,12 +258,14 @@ void GeneratorItem::paint(QPainter *painter,
     font.setPointSize(8);
     painter->setFont(font);
     if (m_node != nullptr)
-        painter->drawText(QRectF(-26.5, 13, 53, 10), Qt::AlignCenter, m_node->getStringTypeNodeProperty());
+        painter->drawText(QRectF(-26.5, 13, 53, 10), Qt::AlignCenter, m_node->getStringTypeNodeProperty().size()>9 ?
+                              m_node->getStringTypeNodeProperty().left(6)+"..." : m_node->getStringTypeNodeProperty());
 }
 
 //--------------------------------------------------------------------------
 BranchItem::BranchItem(SchemeItem *const startItem, const QString &resistsnce)
-    : SchemeItem("Branch"), m_start(), m_end(),
+    : SchemeItem("Branch"), m_arrowVisible(false),
+      m_arrowDirection(false), m_start(), m_end(),
       m_line(0,0,0,0), m_resistor(), m_path(),
       m_resistsnce(resistsnce),
       m_startItem(startItem),
@@ -266,7 +278,8 @@ BranchItem::BranchItem(SchemeItem *const startItem, const QString &resistsnce)
 }
 
 BranchItem::BranchItem(SchemeItem *const startItem, SchemeItem *const endItem, const QString &resistsnce)
-    : SchemeItem("Branch"), m_start(), m_end(),
+    : SchemeItem("Branch"), m_arrowVisible(false),
+      m_arrowDirection(false), m_start(), m_end(),
       m_line(0,0,0,0), m_resistor(), m_path(),
       m_resistsnce(resistsnce),
       m_startItem(startItem),
@@ -290,6 +303,16 @@ void BranchItem::setResText(QString &resistsnce)
 {
     m_resistsnce = resistsnce;
     update();
+}
+
+void BranchItem::setArrowVisible(bool visible)
+{
+
+}
+
+void BranchItem::setArrowDirection(bool direction)
+{
+
 }
 
 void BranchItem::movePoint(const QPointF &start, const QPointF &end)
@@ -372,8 +395,12 @@ void BranchItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option
     painter->drawPath(path());
 
     painter->setPen(QPen(Qt::black, 2));
+    QFont font = painter->font();
+    font.setPointSize(12);
+    painter->setFont(font);
     if (m_node != nullptr)
-        painter->drawText(boundingRect(), Qt::AlignCenter, m_node->getStringTypeNodeProperty());
+        painter->drawText(boundingRect(), Qt::AlignCenter, m_node->getStringTypeNodeProperty().size()>9 ?
+                              m_node->getStringTypeNodeProperty().left(6)+"..." : m_node->getStringTypeNodeProperty());
 
 }
 
@@ -499,10 +526,11 @@ void LoadItem::paint(QPainter *painter,
     painter->drawPath(m_path);
     painter->setPen(QPen(Qt::black, 2));
     QFont font = painter->font();
-    font.setPointSize(15);
+    font.setPointSize(12);
     painter->setFont(font);
     if (m_node != nullptr)
-        painter->drawText(QRect(50,-15,80,30), Qt::AlignCenter, m_node->getStringTypeNodeProperty());
+        painter->drawText(QRect(50,-15,80,30), Qt::AlignCenter, m_node->getStringTypeNodeProperty().size()>9 ?
+                              m_node->getStringTypeNodeProperty().left(6)+"..." : m_node->getStringTypeNodeProperty());
 
 }
 

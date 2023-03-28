@@ -5,7 +5,8 @@
 
 SchemeScene::SchemeScene()
     : m_layoutScheme(new LayoutScheme), m_gridBinging(false),
-      m_mode(None), m_insertedItem(nullptr)
+      m_setingDefaultVal(false), m_mode(None), m_insertedItem(nullptr),
+      schemeName("Untited.scm")
 {
     setSceneRect(0,0, m_sceneSize, m_sceneSize);
     setItemIndexMethod(QGraphicsScene::ItemIndexMethod::BspTreeIndex);
@@ -21,6 +22,30 @@ SchemeScene::~SchemeScene()
 LayoutScheme *SchemeScene::getLayoutSchem() const
 {
     return m_layoutScheme;
+}
+
+const QString SchemeScene::getSchemeName() const
+{
+    return schemeName;
+}
+
+void SchemeScene::setSchemeName(const QString &name)
+{
+    schemeName = name;
+}
+
+QDataStream &operator<<(QDataStream &out, SchemeScene &scene)
+{
+    for (auto item : scene.items())
+    {
+        out << *static_cast<SchemeItem*>(item);
+    }
+    return out;
+}
+
+QDataStream &operator>>(QDataStream &in, SchemeScene &scene)
+{
+    return in;
 }
 
 void SchemeScene::setMode(Mode mode)
@@ -102,6 +127,12 @@ void SchemeScene::setMode(Mode mode)
     m_mode = mode;
 }
 
+void SchemeScene::setSetingDefaultVal(bool state)
+{
+    m_setingDefaultVal = state;
+    qDebug()<<m_setingDefaultVal;
+}
+
 void SchemeScene::setGridBinding(bool gridBinding)
 {
     m_gridBinging = gridBinding;
@@ -147,6 +178,8 @@ void SchemeScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
             {
                 m_insertedItem->setTransparent(false);
                 m_insertedItem->setNode(m_layoutScheme->addGenerator());
+                if (!m_setingDefaultVal)
+                    emit input(m_layoutScheme, m_insertedItem->getNode(), event->screenPos());
                 m_insertedItem = nullptr;
                 setMode(m_mode);
             }
@@ -196,6 +229,8 @@ void SchemeScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
                                 addBranch(static_cast<BranchItem*>(m_insertedItem));
                         m_insertedItem->setNode(branch);
                         m_insertedItem->setAllowed(false);
+                        if (!m_setingDefaultVal)
+                            emit input(m_layoutScheme, m_insertedItem->getNode(), event->screenPos());
                         m_insertedItem = nullptr;
                         stage = false;
                         setMode(m_mode);
@@ -357,6 +392,8 @@ void SchemeScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
                                    getItem()->scenePos());
                 m_insertedItem->setStage(false);
             }
+            if (!m_setingDefaultVal)
+                emit input(m_layoutScheme, m_insertedItem->getNode(), event->screenPos());
             m_insertedItem = nullptr;
             setMode(m_mode);
         }
@@ -365,18 +402,28 @@ void SchemeScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
 void SchemeScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 {
-    if (itemAt(event->scenePos(), QTransform()) != nullptr)
-        if (itemAt(event->scenePos(), QTransform())->parentItem() != nullptr)
-            if (itemAt(event->scenePos(), QTransform())->parentItem()->type() == SchemeItem::TypeGeneratorItem ||
+    if (itemAt(event->scenePos(), QTransform()) != nullptr &&
+            itemAt(event->scenePos(), QTransform())->parentItem() != nullptr &&
+                (itemAt(event->scenePos(), QTransform())->parentItem()->type() == SchemeItem::TypeGeneratorItem ||
                     itemAt(event->scenePos(), QTransform())->parentItem()->type() == SchemeItem::TypeBranchItem ||
-                    itemAt(event->scenePos(), QTransform())->parentItem()->type() == SchemeItem::TypeLoadItem)
+                    itemAt(event->scenePos(), QTransform())->parentItem()->type() == SchemeItem::TypeLoadItem))
                 emit input(m_layoutScheme,
-                           static_cast<SchemeItem*>(itemAt(event->scenePos(), QTransform())->parentItem())->getNode());
+                           static_cast<SchemeItem*>(itemAt(event->scenePos(), QTransform())->parentItem())->getNode(),
+                           event->screenPos());
 }
 
 void SchemeScene::clearScene()
 {
-
+    for (auto item : items())
+    {
+        if (item->type() >= SchemeItem::SchemeType)
+        {
+            m_layoutScheme->deleteNode(static_cast<SchemeItem*>(item)->getNode());
+            removeItem(item);
+        }
+        else
+            removeItem(item);
+    }
 }
 
 void SchemeScene::removeSelectedItems()

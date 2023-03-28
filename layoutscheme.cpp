@@ -76,7 +76,7 @@ Node *LayoutScheme::addLoad(Node *node)
     return m_load.last();
 }
 
-void LayoutScheme::setVoltage(Node *generator, double voltage)
+void LayoutScheme::setVoltage(Node *generator, complexnum voltage)
 {
     if (generator->type() == Node::TypeGeneratorNode)
         static_cast<GeneratorNode*>(generator)->setVoltage(voltage);
@@ -93,19 +93,24 @@ void LayoutScheme::setBranch(Node *branch, complexnum resistance)
     static_cast<BranchNode*>(branch)->setResistance(resistance);
 }
 
-void LayoutScheme::setBranch(Node *node, Node *linkNode, complexnum resistance)
-{
-
-}
-
-void LayoutScheme::deleteBranch(Node *node, Node *linkNode)
-{
-
-}
-
 void LayoutScheme::deleteNode(Node *node)
 {
-
+    switch (node->type())
+    {
+    case Node::TypeVertexNode:
+        m_vertex.removeOne(static_cast<VertexNode*>(node));
+        break;
+    case Node::TypeGeneratorNode:
+        m_generator.removeOne(static_cast<GeneratorNode*>(node));
+        break;
+    case Node::TypeBranchNode:
+    case Node::TypeGenBranchNode:
+        m_branch.removeOne(static_cast<BranchNode*>(node));
+        break;
+    case Node::TypeLoadNode:
+        m_load.removeOne(static_cast<LoadNode*>(node));
+        break;
+    }
 }
 
 complexnum LayoutScheme::getVoltage(Node *generator) const
@@ -281,12 +286,12 @@ LayoutScheme::GeneratorNode::GeneratorNode()
 
 }
 
-void LayoutScheme::GeneratorNode::setVoltage(double voltage)
+void LayoutScheme::GeneratorNode::setVoltage(complexnum voltage)
 {
     m_voltage = voltage;
 }
 
-double LayoutScheme::GeneratorNode::getVoltage() const
+complexnum LayoutScheme::GeneratorNode::getVoltage() const
 {
     return m_voltage;
 }
@@ -311,7 +316,11 @@ complexnum LayoutScheme::GeneratorNode::getTypeNodeProperty() const
 
 QString LayoutScheme::GeneratorNode::getStringTypeNodeProperty() const
 {
-    return QString("%1 v").arg(QString::number(m_voltage));
+    if (m_voltage.imag() == 0)
+        return QString("%1 v").arg(QString::number(m_voltage.real()));
+    if (m_voltage.imag() > 0)
+        return QString("%1+%2i v").arg(QString::number(m_voltage.real()), QString::number(m_voltage.imag()));
+    return QString("%1%2i v").arg(QString::number(m_voltage.real()), QString::number(m_voltage.imag()));
 }
 
 void LayoutScheme::GeneratorNode::addLoad(LoadNode *)

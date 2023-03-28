@@ -22,12 +22,10 @@ public:
     Node *addBranch(Node *firstNode, Node *secondNnode);
     Node *addLoad(Node *node);
 
-    void setVoltage(Node *Generator, double voltage);
+    void setVoltage(Node *Generator, complexnum voltage);
     void setLoad(Node *load, complexnum resistance);
     void setBranch(Node *branch, complexnum resistance);
-    void setBranch(Node *node, Node* linkNode, complexnum resistance);
 
-    void deleteBranch(Node *node, Node* linkNode);
     void deleteNode(Node *node);
 
     complexnum getVoltage(Node *generator) const;
@@ -93,8 +91,8 @@ private:
     public:
         GeneratorNode();
         ~GeneratorNode() = default;
-        virtual void setVoltage(double voltage);
-        virtual double getVoltage() const;
+        virtual void setVoltage(complexnum voltage);
+        virtual complexnum getVoltage() const;
 
         virtual int type() const override;
         virtual Node *getAssignedNode(Node *node = nullptr) override;
@@ -102,7 +100,7 @@ private:
         QString getStringTypeNodeProperty() const override;
 
     private:
-        double m_voltage;
+        complexnum m_voltage;
         void addLoad(LoadNode *) override;
         const QVector<LoadNode *> getLoads() const override;
     };

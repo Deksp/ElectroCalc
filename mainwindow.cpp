@@ -1,27 +1,35 @@
 #include "mainwindow.h"
 
+#include <QFile>
 #include <QLabel>
 #include <QLayout>
 #include <QAction>
 #include <QToolBar>
 #include <QButtonGroup>
-#include <QDockWidget>
 #include <QTreeWidgetItem>
+#include <QFileDialog>
+#include <QDockWidget>
+#include <QDataStream>
 #include <QTreeWidget>
 #include <QKeyEvent>
 
+
+
 extern QString tabStyle;
+bool InputWidget::defValsStatus = false;
+const QString MainWindow::SetingsFileName = "setingsFile";
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
       mainLayout(new QHBoxLayout),
       layoutScheme(nullptr)
 {
+    setingsList();
     createToolGroup();
 
     scene << new SchemeScene;
-    view << new ViewScheme;
-    view.first()->setScene(scene.first());
+    view = new ViewScheme;
+    view->setScene(scene.first());
     connect(scene.first(), &SchemeScene::unChekButton, this, &MainWindow::unCheckButtonGroup);
     connect(scene.first(), &SchemeScene::input, this, &MainWindow::inputWidgetShow);
 
@@ -30,7 +38,7 @@ MainWindow::MainWindow(QWidget *parent)
     createToolBar();
 
     tabview = new QTabWidget;
-    tabview->addTab(view.first(), "Scheme1");
+    tabview->addTab(view, "Scheme1");
     tabview->setTabPosition(tabPosition(Qt::DockWidgetArea::BottomDockWidgetArea));
     tabview->setStyleSheet(tabStyle);
     mainLayout->addWidget(tabview);
@@ -41,13 +49,23 @@ MainWindow::MainWindow(QWidget *parent)
     setWindowTitle(tr("ElectroCalc"));
     setGeometry(100,100,800,500);
 
-    fileToolBar->setEnabled(false);
-    editToolBar->setEnabled(false);
+    //fileToolBar->setEnabled(false);
+    //editToolBar->setEnabled(false);
+    cut->setEnabled(false);
+    copy->setEnabled(false);
+    paste->setEnabled(false);
+    undo->setEnabled(false);
+    redo->setEnabled(false);
 }
 
 MainWindow::~MainWindow()
 {
+    QFile file(SetingsFileName);
+    QDataStream stream(&file);
 
+    file.open(QIODevice::WriteOnly);
+    stream << lastDirectory;
+    file.close();
 }
 
 void MainWindow::createToolBar()
@@ -58,6 +76,8 @@ void MainWindow::createToolBar()
     fileToolBar->addAction(saveFile);
 
     editToolBar = addToolBar(tr("Edit"));
+    editToolBar->addAction(clean);
+    editToolBar->addAction(_delete);
     editToolBar->addAction(cut);
     editToolBar->addAction(copy);
     editToolBar->addAction(undo);
@@ -111,13 +131,24 @@ void MainWindow::createActions()
 {
     newFile = new QAction(QIcon(":/images/newFile.png"), tr("New File"), this);
     newFile->setStatusTip(tr("Create new file"));
+    connect(newFile, &QAction::triggered, this, &MainWindow::runNewFile);
 
     openFile = new QAction(QIcon(":/images/openFile.png"), tr("Open File"), this);
     openFile->setStatusTip(tr("Open file"));
+    connect(openFile, &QAction::triggered, this, &MainWindow::runOpenFile);
 
     saveFile = new QAction(QIcon(":/images/saveFile.png"), tr("Save File"), this);
     saveFile->setStatusTip(tr("Save file"));
     saveFile->setShortcut(tr("Ctrl+S"));
+    connect(saveFile, &QAction::triggered, this, &MainWindow::runSaveFile);
+
+    clean = new QAction(QIcon(":/images/clean.png"), tr("Clean"), this);
+    clean->setStatusTip(tr("Clean"));
+    connect(clean, &QAction::triggered, getCurrentScene(), &SchemeScene::clearScene);
+
+    _delete = new QAction(QIcon(":/images/delete.png"), tr("Delete"), this);
+    _delete->setStatusTip(tr("Delete"));
+    _delete->setShortcut(tr("DEL"));
 
     cut = new QAction(QIcon(":/images/cut.png"), tr("Cut"), this);
     cut->setStatusTip(tr("Cut"));
@@ -144,20 +175,20 @@ void MainWindow::createActions()
     choiseModeAction->setCheckable(true);
     choiseModeAction->setChecked(true);
     choiseModeAction->setShortcut(tr("Shift+S"));
-    connect(choiseModeAction, &QAction::triggered, getCurrentView(), &ViewScheme::setChoiseViewMode);
+    connect(choiseModeAction, &QAction::triggered, view, &ViewScheme::setChoiseViewMode);
 
     grabModeAction = new QAction(QIcon(":/images/grab.png"), tr("Grab"), this);
     grabModeAction->setStatusTip(tr("Grab mode"));
     grabModeAction->setCheckable(true);
     grabModeAction->setShortcut(tr("Shift+G"));
-    connect(grabModeAction, &QAction::triggered, getCurrentView(), &ViewScheme::setGrabViewMode);
+    connect(grabModeAction, &QAction::triggered, view, &ViewScheme::setGrabViewMode);
 
     gridvisible = new QAction(QIcon(":/images/gridVisible.png"), tr("GridVisible"), this);
     gridvisible->setStatusTip(tr("Grid visible"));
     gridvisible->setCheckable(true);
     gridvisible->setChecked(true);
     gridvisible->setShortcut(tr("Shift+F5"));
-    connect(gridvisible, &QAction::toggled, getCurrentView(), &ViewScheme::showGrid);
+    connect(gridvisible, &QAction::toggled, view, &ViewScheme::showGrid);
 
     gridbinding = new QAction(QIcon(":/images/gridBinding.png"), tr("GridBinding"), this);
     gridbinding->setStatusTip(tr("Grid binding"));
@@ -172,20 +203,79 @@ void MainWindow::createActions()
     connect(runAction, &QAction::triggered, this, &MainWindow::Calc);
 }
 
+void MainWindow::setingsList()
+{
+    QFile file(SetingsFileName);
+    QDataStream stream(&file);
+
+    if (!file.exists())
+    {
+        lastDirectory = "\\";
+        file.open(QIODevice::WriteOnly);
+        stream << lastDirectory;
+        file.close();
+        return;
+    }
+    else
+    {
+        file.open(QIODevice::ReadOnly);
+        stream >> lastDirectory;
+        file.close();
+        return;
+    }
+}
+
 SchemeScene *MainWindow::getCurrentScene()
 {
     return scene.first();
-}
-
-ViewScheme *MainWindow::getCurrentView()
-{
-    return view.first();
 }
 
 void MainWindow::unCheckButtonGroup()
 {
     for (QAbstractButton *button : buttonGroup->buttons())
         button->setChecked(false);
+}
+
+void MainWindow::runNewFile()
+{
+
+}
+
+void MainWindow::runOpenFile()
+{
+    QString fileName =
+        QFileDialog::getOpenFileName(this, tr("Open file"), "/", "*.*");
+    if (fileName.isNull())
+        return;
+    QFile file(fileName);
+    QDataStream stream(&file);
+
+    file.open(QIODevice::ReadOnly);
+    SchemeScene *scene;
+    stream >> *scene;
+    this->scene << scene;
+    file.close();
+}
+
+void MainWindow::runSaveFile()
+{
+    QString fileName =
+            QFileDialog::getSaveFileName(this, tr("Save file"), lastDirectory+getCurrentScene()->getSchemeName(), "*.scm");
+    lastDirectory = fileName.section('/', 0, -2) + '/';
+
+    QFile file(fileName);
+    QDataStream stream(&file);
+
+    file.open(QIODevice::WriteOnly);
+    stream << 5;
+    file.close();
+
+    file.open(QIODevice::ReadOnly);
+    int scm;
+    stream >> scm;
+    qDebug()<<scm;
+
+    file.close();
 }
 
 void MainWindow::Calc()
@@ -205,9 +295,11 @@ void MainWindow::Calc()
     calc.endCalculations();
 }
 
-void MainWindow::inputWidgetShow(LayoutScheme *layout, Node *node)
+void MainWindow::inputWidgetShow(LayoutScheme *layout, Node *node, const QPoint &pos)
 {
     InputWidget *input = new InputWidget(layout, node, this);
+    input->setGeometry(pos.x(),pos.y(),300,1);
+    input->setWindowTitle(tr("Input"));
     input->show();
 }
 
@@ -253,35 +345,83 @@ QWidget *AddButton::createCellWidget()
 }
 
 InputWidget::InputWidget(LayoutScheme *layout, Node *node, QWidget *parent)
-    : QDialog(parent), m_layout(layout), m_node(node), lineEdit(this)
+    : QDialog(parent), m_layout(layout), m_node(node), lineEdit(this), m_reversValue(false)
 {
     QGridLayout *layoutWidget = new QGridLayout;
-    layoutWidget->addWidget(&lineEdit);
+
+    QToolButton *aceptButton = new QToolButton;
+    aceptButton->setIcon(QIcon(":/images/accept.png"));
+    connect(aceptButton, &QToolButton::clicked, this, &InputWidget::acceptValue);
+
+    QToolButton *inverseCondactions = new QToolButton;
+    inverseCondactions->setIcon(QIcon(":/images/inverseCondaction.png"));
+    inverseCondactions->setCheckable(true);
+    inverseCondactions->setToolTip(tr("Reverse the value"));
+    inverseCondactions->setShortcut(tr("Shift+i"));
+    connect(inverseCondactions, &QToolButton::toggled, this, &InputWidget::setReversValue);
+
+    QToolButton *defVals = new QToolButton;
+    defVals->setIcon(QIcon(":/images/def_values.png"));
+    defVals->setCheckable(true);
+    defVals->setChecked(defValsStatus);
+    defVals->setToolTip(tr("Use default values"));
+    connect(defVals, &QToolButton::toggled, this, &InputWidget::setDefValsStatus);
+    connect(defVals, &QToolButton::toggled,
+            static_cast<MainWindow*>(parent)->getCurrentScene(), &SchemeScene::setSetingDefaultVal);
+
+    layoutWidget->addWidget(&lineEdit,0,2);
+    layoutWidget->addWidget(aceptButton, 0, 3);
+    layoutWidget->addWidget(defVals, 0, 0);
+    layoutWidget->addWidget(inverseCondactions, 0, 1);
     layoutWidget->setMargin(0);
     setLayout(layoutWidget);
+
+    QString lineValue(m_node->getStringTypeNodeProperty());
+    QFont font = lineEdit.font();
+    font.setPointSize(12);
+    lineEdit.setFont(font);
+    lineEdit.setText(lineValue.contains('v') ? lineValue.remove(" v") : lineValue.remove(QString(" Ω")));
+    lineEdit.setSelection(0, lineValue.size());
 }
 
 void InputWidget::keyPressEvent(QKeyEvent *event)
 {
     if(event->key() == Qt::Key_Enter || event->key() == Qt::Key_Return)
-    {
-        switch (m_node->type())
-        {
-        case Node::TypeGeneratorNode:
-            m_layout->setVoltage(m_node, lineEdit.text().toDouble());
-            break;
-        case Node::TypeBranchNode:
-        case Node::TypeGenBranchNode:
-            m_layout->setBranch(m_node, convert(lineEdit.text()));
-            break;
-        case Node::TypeLoadNode:
-            m_layout->setLoad(m_node, convert(lineEdit.text()));
-            break;
-        }
-        this->~InputWidget();
-    }
+        acceptValue();
     else
         QDialog::keyPressEvent(event);
+}
+
+void InputWidget::acceptValue()
+{
+    complexnum num;
+    num = convert(lineEdit.text());
+    if (m_reversValue)
+        num = complexnum(1)/num;
+    switch (m_node->type())
+    {
+    case Node::TypeGeneratorNode:
+        m_layout->setVoltage(m_node, num);
+        break;
+    case Node::TypeBranchNode:
+    case Node::TypeGenBranchNode:
+        m_layout->setBranch(m_node, num);
+        break;
+    case Node::TypeLoadNode:
+        m_layout->setLoad(m_node, num);
+        break;
+    }
+    this->~InputWidget();
+}
+
+void InputWidget::setReversValue(bool state)
+{
+    m_reversValue = state;
+}
+
+void InputWidget::setDefValsStatus(bool state)
+{
+    defValsStatus = state;
 }
 
 complexnum InputWidget::convert(const QString &text)

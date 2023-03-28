@@ -43,6 +43,9 @@ public:
 
     Node *getNode() const;
 
+    friend QDataStream& operator<<(QDataStream &out, SchemeItem &item);
+    friend QDataStream& operator>>(QDataStream &in, SchemeItem &item);
+
 private:
     bool m_block, m_stage, m_allowed;
     qreal m_opacity;
@@ -133,8 +136,12 @@ public:
     void moveEndPoint(const QPointF &end);
     void setEndItem(SchemeItem *const endItem);
     void setResText(QString &resistsnce);
+    void setArrowVisible(bool visible);
+    void setArrowDirection(bool direction);
 
 private:
+    bool m_arrowVisible;
+    bool m_arrowDirection;
     QPointF m_start;
     QPointF m_end;
     QLineF m_line;

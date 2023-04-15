@@ -184,6 +184,95 @@ uint LayoutScheme::getQuanityLayout()
     return 0;
 }
 
+QList<Dpair> LayoutScheme::serializationNode(Node *node)
+{
+    switch (node->type())
+    {
+    case Node::TypeVertexNode:
+        return QList<Dpair>()<< Dpair(node->type(),0) << Dpair(node->getId(),0);
+        break;
+    case Node::TypeGeneratorNode:
+        return QList<Dpair>()<< Dpair(node->type(),0) << Dpair(node->getId(),0) <<
+               Dpair(static_cast<GeneratorNode*>(node)->getVoltage().real(),
+                     static_cast<GeneratorNode*>(node)->getVoltage().imag());
+        break;
+    case Node::TypeBranchNode:
+        return QList<Dpair>()<< Dpair(node->type(),0) <<
+               Dpair(static_cast<BranchNode*>(node)->getFirstNode()->getId(),0) <<
+               Dpair(static_cast<BranchNode*>(node)->getSecondNode()->getId(),0) <<
+               Dpair(static_cast<BranchNode*>(node)->getResistance().real(),
+                     static_cast<BranchNode*>(node)->getResistance().imag());
+        break;
+    case Node::TypeGenBranchNode:
+        return QList<Dpair>()<< Dpair(node->type(),0) <<
+               Dpair(static_cast<BranchNode*>(node)->getFirstNode()->getId(),0) <<
+               Dpair(static_cast<BranchNode*>(node)->getSecondNode()->getId(),0) <<
+               Dpair(static_cast<BranchNode*>(node)->getResistance().real(),
+                     static_cast<BranchNode*>(node)->getResistance().imag());
+        break;
+    case Node::TypeLoadNode:
+        return QList<Dpair>()<< Dpair(node->type(),0) <<
+               Dpair(static_cast<LoadNode*>(node)->getAssignedNode()->getId(),0) <<
+               Dpair(static_cast<LoadNode*>(node)->getResistance().real(),
+                     static_cast<LoadNode*>(node)->getResistance().imag());
+        break;
+    default:
+        break;
+    }
+    return QList<Dpair>();
+}
+
+Node *LayoutScheme::deserializationNode(QList<Dpair> list)
+{
+    Dpair type;
+    type = list[0];
+    Node *node = nullptr;
+    switch (int(type.first))
+    {
+    case Node::TypeVertexNode:
+    {
+        node = addVertex();
+    }
+        break;
+    case Node::TypeGeneratorNode:
+    {
+        node = addGenerator();
+        static_cast<GeneratorNode*>(node)->setVoltage(
+                    complexnum(list[2].first, list[2].second));
+    }
+        break;
+    case Node::TypeBranchNode:
+    {
+        Node *firstNode = getVertex(list[1].first-1);
+        Node *secondNode = getVertex(list[2].first-1);
+        node = addBranch(firstNode, secondNode);
+        static_cast<BranchNode*>(node)->setResistance(
+                    complexnum(list[3].first, list[3].second));
+    }
+        break;
+    case Node::TypeGenBranchNode:
+    {
+        Node *firstNode = getGenerator(list[1].first-1);
+        Node *secondNode = getVertex(list[2].first-1);
+        node = addBranch(firstNode, secondNode);
+        static_cast<BranchNode*>(node)->setResistance(
+                    complexnum(list[3].first, list[3].second));
+    }
+        break;
+    case Node::TypeLoadNode:
+    {
+        Node *assignNode = getVertex(list[1].first-1);
+        node = addLoad(assignNode);
+        static_cast<LoadNode*>(node)->setResistance(
+                    complexnum(list[2].first, list[2].second));
+    }
+        break;
+    default:
+        break;
+    }
+    return node;
+}
+
 //--------------------------------------------------------------------------
 
 LayoutScheme::VertexNode::VertexNode()
@@ -385,11 +474,23 @@ QString LayoutScheme::BranchNode::getStringTypeNodeProperty() const
 
 LayoutScheme::VertexNode *LayoutScheme::BranchNode::getFirstNode()
 {
+    if (type() == TypeGenBranchNode)
+    {
+        if (m_firstNode->type() == TypeGeneratorNode)
+            return m_firstNode;
+        return m_secondNode;
+    }
     return m_firstNode;
 }
 
 LayoutScheme::VertexNode *LayoutScheme::BranchNode::getSecondNode()
 {
+    if (type() == TypeGenBranchNode)
+    {
+        if (m_firstNode->type() == TypeGeneratorNode)
+            return m_secondNode;
+        return m_firstNode;
+    }
     return m_secondNode;
 }
 

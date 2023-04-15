@@ -23,6 +23,26 @@ void ViewScheme::wheelEvent(QWheelEvent *event)
         scale(scaleFactor, scaleFactor);
 }
 
+void ViewScheme::mousePressEvent(QMouseEvent *event)
+{
+    QGraphicsView::mousePressEvent(event);
+    if (event->button() == Qt::MidButton)
+    {
+        setGrabViewMode();
+        mousePressEvent(new QMouseEvent(QMouseEvent::KeyPress, event->pos(), Qt::LeftButton, Qt::NoButton, Qt::NoModifier));
+    }
+}
+
+void ViewScheme::mouseReleaseEvent(QMouseEvent *event)
+{
+    QGraphicsView::mouseReleaseEvent(event);
+    if (event->button() == Qt::MidButton)
+    {
+        setChoiseViewMode();
+        mousePressEvent(new QMouseEvent(QMouseEvent::KeyPress, event->pos(), Qt::LeftButton, Qt::NoButton, Qt::NoModifier));
+    }
+}
+
 void ViewScheme::setChoiseViewMode()
 {
     setDragMode(QGraphicsView::NoDrag);

@@ -26,6 +26,7 @@ public:
     LayoutScheme *getLayoutSchem() const;
     const QString getSchemeName() const;
     void setSchemeName(const QString &name);
+    SchemeItem *getItemfromNode(Node *node);
 
     friend QDataStream& operator<<(QDataStream &out, SchemeScene &scene);
     friend QDataStream& operator>>(QDataStream &in, SchemeScene &scene);

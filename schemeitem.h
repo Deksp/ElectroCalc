@@ -43,9 +43,6 @@ public:
 
     Node *getNode() const;
 
-    friend QDataStream& operator<<(QDataStream &out, SchemeItem &item);
-    friend QDataStream& operator>>(QDataStream &in, SchemeItem &item);
-
 private:
     bool m_block, m_stage, m_allowed;
     qreal m_opacity;
@@ -142,19 +139,20 @@ public:
 private:
     bool m_arrowVisible;
     bool m_arrowDirection;
+    bool m_resistorVisible;
     QPointF m_start;
     QPointF m_end;
     QLineF m_line;
-    QPolygonF m_resistor;
     QPainterPath m_path;
     QString m_resistsnce;
+    QRectF m_resRect;
     SchemeItem *m_startItem;
     SchemeItem *m_endItem; 
 
     void movePoint(const QPointF &start, const QPointF &end);
 
-    static const quint16 resistor_width = 80;
-    static const quint16 resistor_height = 30;
+    static const quint16 resistor_width = 150;
+    static const quint16 resistor_height = 40;
 
 protected:
     void paint(QPainter *painter,

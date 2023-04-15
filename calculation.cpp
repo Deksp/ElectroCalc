@@ -34,7 +34,7 @@ void Calculation::startingCalculations(LayoutScheme *layout)
                         m_condactionMatrix[i][j] += complexnum(1)/branch->getResistance();
                 for (auto load : layout->getVertex(i)->getLoads())
                     if (load->getResistance()!=complexnum(0))
-                        m_condactionMatrix[i][j] += load->getResistance();
+                        m_condactionMatrix[i][j] += complexnum(1)/load->getResistance();
                 m_condactionMatrix[i][j] *= complexnum(-1);
             }
             else if (layout->getVertex(i)->getBranchAt(layout->getVertex(j)) != nullptr &&

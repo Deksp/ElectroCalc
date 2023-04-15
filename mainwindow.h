@@ -16,6 +16,7 @@ class QAction;
 class QButtonGroup;
 class QToolButton;
 class QHBoxLayout;
+class QGridLayout;
 QT_END_NAMESPACE
 class AddButton;
 class InputWidget;
@@ -38,7 +39,8 @@ private:
     void getFileName();
     void setingsList();
 
-signals:
+protected:
+    void keyPressEvent(QKeyEvent *event) override;
 
 private slots:
     void Calc();
@@ -122,11 +124,15 @@ public slots:
     void acceptValue();
     void setReversValue(bool state);
     void setDefValsStatus(bool state);
+    void polyarVisible();
 
 private:
     LayoutScheme *m_layout;
     Node *m_node;
     QLineEdit lineEdit;
+    QLineEdit polyarLineEdit;
+    QGridLayout *layoutWidget;
+    bool polyarState;
     bool m_reversValue;
     static bool defValsStatus;
 };

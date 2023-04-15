@@ -59,16 +59,6 @@ Node *SchemeItem::getNode() const
     return m_node;
 }
 
-QDataStream &operator>>(QDataStream &in, SchemeItem &item)
-{
-    return in;
-}
-
-QDataStream &operator<<(QDataStream &out, SchemeItem &item)
-{
-    return out;
-}
-
 void SchemeItem::setStage(bool stage)
 {
     m_stage = stage;
@@ -266,7 +256,7 @@ void GeneratorItem::paint(QPainter *painter,
 BranchItem::BranchItem(SchemeItem *const startItem, const QString &resistsnce)
     : SchemeItem("Branch"), m_arrowVisible(false),
       m_arrowDirection(false), m_start(), m_end(),
-      m_line(0,0,0,0), m_resistor(), m_path(),
+      m_line(0,0,0,0), m_path(),
       m_resistsnce(resistsnce),
       m_startItem(startItem),
       m_endItem(nullptr)
@@ -280,7 +270,7 @@ BranchItem::BranchItem(SchemeItem *const startItem, const QString &resistsnce)
 BranchItem::BranchItem(SchemeItem *const startItem, SchemeItem *const endItem, const QString &resistsnce)
     : SchemeItem("Branch"), m_arrowVisible(false),
       m_arrowDirection(false), m_start(), m_end(),
-      m_line(0,0,0,0), m_resistor(), m_path(),
+      m_line(0,0,0,0), m_path(),
       m_resistsnce(resistsnce),
       m_startItem(startItem),
       m_endItem(endItem)
@@ -327,49 +317,54 @@ void BranchItem::movePoint(const QPointF &start, const QPointF &end)
     QPointF centerP(m_line.center());
     const quint16 rweight = resistor_width/2;
     const quint16 rheight = resistor_height/2;
+    m_resRect = QRectF(QPointF(-rweight,-rheight),QSize(resistor_width,resistor_height));
 
     qreal halfLen = sqrt(pow(centerP.x() - m_start.x(), 2) +
                          pow(centerP.y() - m_start.y(), 2));
 
-    if (halfLen > 90)
+    if (halfLen > 54+rweight)
     {
-    QPointF delta((rweight/halfLen)*(centerP.x()-m_start.x()),
-                  (rweight/halfLen)*(centerP.y()-m_start.y()));
+        m_resistorVisible = true;
+        QPointF delta((rweight/halfLen)*(centerP.x()-m_start.x()),
+                      (rweight/halfLen)*(centerP.y()-m_start.y()));
 
-    qreal degBranch = atan((m_end.y()-m_start.y())/(m_end.x()-m_start.x()));
-    if ((m_end.x()-m_start.x())<0)
-        degBranch += qDegreesToRadians(180.);
+        qreal degBranch = atan((m_end.y()-m_start.y())/(m_end.x()-m_start.x()));
+        if ((m_end.x()-m_start.x())<0)
+            degBranch += qDegreesToRadians(180.);
 
-    QPointF beginResistorP(centerP - delta);
-    QPointF resistorP1(beginResistorP.x()+cos(degBranch-(qDegreesToRadians(90.)))*rheight,
-                       beginResistorP.y()+sin(degBranch-(qDegreesToRadians(90.)))*rheight);
-    QPointF resistorP2(resistorP1.x() + cos(degBranch)*resistor_width,
-                       resistorP1.y() + sin(degBranch)*resistor_width);
-    QPointF endResistorP(resistorP2.x()+cos(degBranch-(qDegreesToRadians(-90.)))*rheight,
-                         resistorP2.y()+sin(degBranch-(qDegreesToRadians(-90.)))*rheight);
-    QPointF resistorP3(endResistorP.x()+cos(degBranch-(qDegreesToRadians(-90.)))*rheight,
-                       endResistorP.y()+sin(degBranch-(qDegreesToRadians(-90.)))*rheight);
-    QPointF resistorP4(resistorP3.x() + cos(degBranch+qDegreesToRadians(180.))*resistor_width,
-                       resistorP3.y() + sin(degBranch+qDegreesToRadians(180.))*resistor_width);
+        QPointF beginResistorP(centerP - delta);
+        QPointF resistorP1(beginResistorP.x()+cos(degBranch-(qDegreesToRadians(90.)))*rheight,
+                           beginResistorP.y()+sin(degBranch-(qDegreesToRadians(90.)))*rheight);
+        QPointF resistorP2(resistorP1.x() + cos(degBranch)*resistor_width,
+                           resistorP1.y() + sin(degBranch)*resistor_width);
+        QPointF endResistorP(resistorP2.x()+cos(degBranch-(qDegreesToRadians(-90.)))*rheight,
+                             resistorP2.y()+sin(degBranch-(qDegreesToRadians(-90.)))*rheight);
+        QPointF resistorP3(endResistorP.x()+cos(degBranch-(qDegreesToRadians(-90.)))*rheight,
+                           endResistorP.y()+sin(degBranch-(qDegreesToRadians(-90.)))*rheight);
+        QPointF resistorP4(resistorP3.x() + cos(degBranch+qDegreesToRadians(180.))*resistor_width,
+                           resistorP3.y() + sin(degBranch+qDegreesToRadians(180.))*resistor_width);
 
-    m_path.clear();
-    m_path.moveTo(m_start);
-    m_path.lineTo(beginResistorP);
-    m_path.lineTo(resistorP1);
-    m_path.lineTo(resistorP2);
-    m_path.lineTo(endResistorP);
-    m_path.lineTo(m_end);
-    m_path.moveTo(endResistorP);
-    m_path.lineTo(resistorP3);
-    m_path.lineTo(resistorP4);
-    m_path.lineTo(beginResistorP);
+
+        m_path.clear();
+        m_path.moveTo(m_start);
+        m_path.lineTo(beginResistorP);
+        m_path.lineTo(resistorP1);
+        m_path.lineTo(resistorP2);
+        m_path.lineTo(endResistorP);
+        m_path.lineTo(m_end);
+        m_path.moveTo(endResistorP);
+        m_path.lineTo(resistorP3);
+        m_path.lineTo(resistorP4);
+        m_path.lineTo(beginResistorP);
     }
     else
     {
+        m_resistorVisible = false;
         m_path.clear();
         m_path.moveTo(m_start);
         m_path.lineTo(m_end);
     }
+
 
     setPath(m_path);
 }
@@ -396,12 +391,20 @@ void BranchItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option
 
     painter->setPen(QPen(Qt::black, 2));
     QFont font = painter->font();
-    font.setPointSize(12);
+    font.setPointSize(18);
     painter->setFont(font);
-    if (m_node != nullptr)
-        painter->drawText(boundingRect(), Qt::AlignCenter, m_node->getStringTypeNodeProperty().size()>9 ?
-                              m_node->getStringTypeNodeProperty().left(6)+"..." : m_node->getStringTypeNodeProperty());
+    if (m_node != nullptr && m_resistorVisible)
+    {
+        painter->translate(m_line.center());
+        qreal angle = 360-m_line.angle();
+        if (angle >270 || angle < 90)
+            painter->rotate(angle);
+        else
+            painter->rotate(angle+180);
+        painter->drawText(m_resRect, Qt::AlignCenter, m_node->getStringTypeNodeProperty().size()>12 ?
+                              m_node->getStringTypeNodeProperty().left(9)+"..." : m_node->getStringTypeNodeProperty());
 
+    }
 }
 
 void BranchItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)

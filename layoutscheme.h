@@ -5,6 +5,8 @@
 
 #include "node.h"
 
+typedef QPair<double, double> Dpair;
+
 class LayoutScheme
 {
 ///----Inner_Classes----///
@@ -43,6 +45,9 @@ public:
     LoadNode *genLoad(uint id_1);
 
     static uint getQuanityLayout();
+
+    QList<Dpair> serializationNode(Node *node);
+    Node *deserializationNode(QList<Dpair> list);
 
 private:
     uint m_layoutId;

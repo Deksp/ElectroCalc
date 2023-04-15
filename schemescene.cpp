@@ -34,17 +34,150 @@ void SchemeScene::setSchemeName(const QString &name)
     schemeName = name;
 }
 
+SchemeItem *SchemeScene::getItemfromNode(Node *node)
+{
+    for (auto item : items())
+    {
+        if (static_cast<SchemeItem*>(item)->getNode() == node)
+            return static_cast<SchemeItem*>(item);
+    }
+    return nullptr;
+}
+
 QDataStream &operator<<(QDataStream &out, SchemeScene &scene)
 {
-    for (auto item : scene.items())
+    QVector<SchemeItem*> branchsAndLoads;
+    QList<QGraphicsItem*> items = scene.items();
+    for (int item = items.size()-1; item != 0; item--)
     {
-        out << *static_cast<SchemeItem*>(item);
+        if (static_cast<SchemeItem*>(items[item])->type() == SchemeItem::TypeVertexItem ||
+                static_cast<SchemeItem*>(items[item])->type() == SchemeItem::TypeGeneratorItem)
+        {
+            out << static_cast<SchemeItem*>(items[item])->type() <<
+                   static_cast<SchemeItem*>(items[item])->scenePos()<<
+                   scene.getLayoutSchem()->serializationNode(
+                   static_cast<SchemeItem*>(items[item])->getNode());
+            continue;
+        }
+        branchsAndLoads << static_cast<SchemeItem*>(items[item]);
     }
+
+    for (auto item : branchsAndLoads)
+    {
+        if (static_cast<SchemeItem*>(item)->type() == SchemeItem::TypeBranchItem ||
+                static_cast<SchemeItem*>(item)->type() == SchemeItem::TypeLoadItem)
+        {
+        out << static_cast<SchemeItem*>(item)->type() <<
+               static_cast<SchemeItem*>(item)->scenePos() <<
+               scene.getLayoutSchem()->serializationNode(
+               static_cast<SchemeItem*>(item)->getNode());
+        }
+    }
+    out << 100;
     return out;
 }
 
 QDataStream &operator>>(QDataStream &in, SchemeScene &scene)
 {
+    while (true)
+    {
+        int type;
+        in >> type;
+        if (type == 100)
+            break;
+        QPointF position;
+        QList<Dpair> nodelist;
+        SchemeItem *insertItem;
+        Node *node;
+
+        in >> position >> nodelist;
+
+        switch (type)
+        {
+        case SchemeItem::TypeVertexItem:
+            node = scene.m_layoutScheme->
+                    deserializationNode(nodelist);
+            insertItem = new VertexItem(QString().setNum(node->getId()));
+            scene.addItem(insertItem);
+            insertItem->setPos(position);
+            insertItem->setNode(node);
+            insertItem->setTransparent(false);
+            break;
+        case SchemeItem::TypeGeneratorItem:
+            node = scene.m_layoutScheme->
+                    deserializationNode(nodelist);
+            insertItem = new GeneratorItem(QString().setNum(node->getId()));
+            scene.addItem(insertItem);
+            insertItem->setPos(position);
+            insertItem->setNode(node);
+            insertItem->setTransparent(false);
+            break;
+        case SchemeItem::TypeLoadItem:
+        {
+            node = scene.m_layoutScheme->
+                    deserializationNode(nodelist);
+
+            insertItem = new LoadItem(node->getStringTypeNodeProperty());
+
+            SchemeItem *item = scene.getItemfromNode(scene.m_layoutScheme->getVertex(nodelist[1].first-1));
+
+            static_cast<VertexItem*>(item)->addLoad(static_cast<LoadItem*>(insertItem));
+            insertItem->setNode(node);
+            static_cast<LoadItem*>(insertItem)->setItem(item);
+            scene.addItem(insertItem);
+            insertItem->setTransparent(false);
+            if (position == item->scenePos()){
+                insertItem->setPos(position);qDebug()<<"1";}
+            else
+            {
+                insertItem->setPos(position);
+                static_cast<LoadItem*>(insertItem)->moveLoad(position);
+                qDebug()<<"3";
+            }
+            break;
+        }
+        case SchemeItem::TypeBranchItem:
+            node = scene.m_layoutScheme->
+                    deserializationNode(nodelist);
+            if (nodelist[0].first == Node::TypeBranchNode)
+            {
+                insertItem = new BranchItem(scene.
+                                        getItemfromNode(
+                                            scene.m_layoutScheme->getVertex(nodelist[1].first-1)),
+                                        scene.getItemfromNode(
+                                            scene.m_layoutScheme->getVertex(nodelist[2].first-1)),
+                                            node->getStringTypeNodeProperty());
+                static_cast<VertexItem*>(scene.getItemfromNode(
+                            scene.m_layoutScheme->getVertex(nodelist[1].first-1)))->addBranch(
+                            static_cast<BranchItem*>(insertItem));
+                static_cast<VertexItem*>(scene.getItemfromNode(
+                            scene.m_layoutScheme->getVertex(nodelist[2].first-1)))->addBranch(
+                            static_cast<BranchItem*>(insertItem));
+            }
+            else
+            {
+                insertItem = new BranchItem(scene.
+                                        getItemfromNode(
+                                            scene.m_layoutScheme->getGenerator(nodelist[1].first-1)),
+                                        scene.getItemfromNode(
+                                            scene.m_layoutScheme->getVertex(nodelist[2].first-1)),
+                                            node->getStringTypeNodeProperty());
+                static_cast<VertexItem*>(scene.getItemfromNode(
+                            scene.m_layoutScheme->getGenerator(nodelist[1].first-1)))->addBranch(
+                            static_cast<BranchItem*>(insertItem));
+                static_cast<VertexItem*>(scene.getItemfromNode(
+                            scene.m_layoutScheme->getVertex(nodelist[2].first-1)))->addBranch(
+                            static_cast<BranchItem*>(insertItem));
+            }
+            insertItem->setNode(node);
+            scene.addItem(insertItem);
+            break;
+        default:
+            break;
+        }
+    }
+    scene.setMode(SchemeScene::Select);
+
     return in;
 }
 
@@ -130,7 +263,6 @@ void SchemeScene::setMode(Mode mode)
 void SchemeScene::setSetingDefaultVal(bool state)
 {
     m_setingDefaultVal = state;
-    qDebug()<<m_setingDefaultVal;
 }
 
 void SchemeScene::setGridBinding(bool gridBinding)
@@ -402,6 +534,8 @@ void SchemeScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
 void SchemeScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 {
+    if (m_insertedItem != nullptr && m_insertedItem->isBlock())
+        return;
     if (itemAt(event->scenePos(), QTransform()) != nullptr &&
             itemAt(event->scenePos(), QTransform())->parentItem() != nullptr &&
                 (itemAt(event->scenePos(), QTransform())->parentItem()->type() == SchemeItem::TypeGeneratorItem ||

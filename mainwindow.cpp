@@ -2,6 +2,7 @@
 
 #include <QFile>
 #include <QLabel>
+#include <QtMath>
 #include <QLayout>
 #include <QAction>
 #include <QToolBar>
@@ -225,9 +226,16 @@ void MainWindow::setingsList()
     }
 }
 
+void MainWindow::keyPressEvent(QKeyEvent *event)
+{
+    QMainWindow::keyPressEvent(event);
+    if (event->key() == Qt::Key_Escape)
+        getCurrentScene()->setMode(SchemeScene::Mode::Select);
+}
+
 SchemeScene *MainWindow::getCurrentScene()
 {
-    return scene.first();
+    return scene.last();
 }
 
 void MainWindow::unCheckButtonGroup()
@@ -251,10 +259,14 @@ void MainWindow::runOpenFile()
     QDataStream stream(&file);
 
     file.open(QIODevice::ReadOnly);
-    SchemeScene *scene;
+    SchemeScene *scene = new SchemeScene;
     stream >> *scene;
+    qDebug()<<scene;
     this->scene << scene;
     file.close();
+    view->setScene(this->scene.last());
+    connect(clean, &QAction::triggered, scene, &SchemeScene::clearScene);
+    connect(gridbinding, &QAction::toggled, scene, &SchemeScene::setGridBinding);
 }
 
 void MainWindow::runSaveFile()
@@ -267,14 +279,7 @@ void MainWindow::runSaveFile()
     QDataStream stream(&file);
 
     file.open(QIODevice::WriteOnly);
-    stream << 5;
-    file.close();
-
-    file.open(QIODevice::ReadOnly);
-    int scm;
-    stream >> scm;
-    qDebug()<<scm;
-
+    stream << *getCurrentScene();
     file.close();
 }
 
@@ -345,9 +350,9 @@ QWidget *AddButton::createCellWidget()
 }
 
 InputWidget::InputWidget(LayoutScheme *layout, Node *node, QWidget *parent)
-    : QDialog(parent), m_layout(layout), m_node(node), lineEdit(this), m_reversValue(false)
+    : QDialog(parent), m_layout(layout), m_node(node), lineEdit(this), polyarState(false), m_reversValue(false)
 {
-    QGridLayout *layoutWidget = new QGridLayout;
+    layoutWidget = new QGridLayout;
 
     QToolButton *aceptButton = new QToolButton;
     aceptButton->setIcon(QIcon(":/images/accept.png"));
@@ -370,10 +375,22 @@ InputWidget::InputWidget(LayoutScheme *layout, Node *node, QWidget *parent)
             static_cast<MainWindow*>(parent)->getCurrentScene(), &SchemeScene::setSetingDefaultVal);
 
     layoutWidget->addWidget(&lineEdit,0,2);
-    layoutWidget->addWidget(aceptButton, 0, 3);
     layoutWidget->addWidget(defVals, 0, 0);
     layoutWidget->addWidget(inverseCondactions, 0, 1);
     layoutWidget->setMargin(0);
+
+    if (node->type() == 1)
+    {
+        QToolButton *polyarVid = new QToolButton;
+        polyarVid->setFont(QFont("",12));
+        polyarVid->setText("∠");
+        connect(polyarVid, &QToolButton::clicked, this, &InputWidget::polyarVisible);
+        layoutWidget->addWidget(polyarVid, 0, 3);
+        layoutWidget->addWidget(aceptButton, 0, 4);
+    }
+    else
+        layoutWidget->addWidget(aceptButton, 0, 3);
+
     setLayout(layoutWidget);
 
     QString lineValue(m_node->getStringTypeNodeProperty());
@@ -396,6 +413,9 @@ void InputWidget::acceptValue()
 {
     complexnum num;
     num = convert(lineEdit.text());
+    if (polyarState)
+        num = complexnum(num.real()*cos(qDegreesToRadians(polyarLineEdit.text().toDouble())),
+                num.real()*sin(qDegreesToRadians(polyarLineEdit.text().toDouble())));
     if (m_reversValue)
         num = complexnum(1)/num;
     switch (m_node->type())
@@ -424,11 +444,48 @@ void InputWidget::setDefValsStatus(bool state)
     defValsStatus = state;
 }
 
+void InputWidget::polyarVisible()
+{
+    layoutWidget->removeWidget(static_cast<QWidget*>(sender()));
+    delete sender();
+
+    QGridLayout *subLayout = new QGridLayout;
+    QLabel *polyarLabel = new QLabel("∠:");
+    subLayout->addWidget(polyarLabel, 0, 0);
+    subLayout->addWidget(&polyarLineEdit, 0, 1);
+    subLayout->setMargin(0);
+    polyarLineEdit.setMaximumSize(30,30);
+    polyarLineEdit.setFont(QFont("", 12));
+    layoutWidget->addLayout(subLayout, 0, 3);
+    setLayout(layoutWidget);
+    polyarState = true;
+}
+
 complexnum InputWidget::convert(const QString &text)
 {
-    if (!text.contains(','))
+    if (text.contains('i'))
+    {
+        int i=0;
+        for (i=text.size()-1;i!=-1;i--)
+            if (text[i] == '+' || text[i] == '-')
+                break;
+        QString real, image;
+        for (int k=0;k<text.size()-1;k++)
+        {
+            if(k<i)
+                real += text[k];
+            if (k>=i)
+                image += text[k];
+        }
+        return complexnum(real.toDouble(), image.toDouble());
+    }
+    if (!text.contains(',') && !text.contains('/'))
         return complexnum(text.toDouble());
-    QStringList textNew = text.split(',');
+    QStringList textNew;
+    if (text.contains(','))
+        textNew = text.split(',');
+    if (text.contains('/'))
+        textNew = text.split('/');
     return complexnum(textNew[0].toDouble(), textNew[1].toDouble());
 }
 

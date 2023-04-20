@@ -98,6 +98,7 @@ private:
     Calculation calc;
     LayoutScheme *layoutScheme;
     QString lastDirectory;
+    QString argvFilePath;
     static const QString SetingsFileName;
 };
 

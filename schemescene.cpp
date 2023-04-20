@@ -126,13 +126,12 @@ QDataStream &operator>>(QDataStream &in, SchemeScene &scene)
             static_cast<LoadItem*>(insertItem)->setItem(item);
             scene.addItem(insertItem);
             insertItem->setTransparent(false);
-            if (position == item->scenePos()){
-                insertItem->setPos(position);qDebug()<<"1";}
+            if (position == item->scenePos())
+                insertItem->setPos(position);
             else
             {
                 insertItem->setPos(position);
                 static_cast<LoadItem*>(insertItem)->moveLoad(position);
-                qDebug()<<"3";
             }
             break;
         }
@@ -534,7 +533,7 @@ void SchemeScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
 void SchemeScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 {
-    if (m_insertedItem != nullptr && m_insertedItem->isBlock())
+    if (m_insertedItem != nullptr)
         return;
     if (itemAt(event->scenePos(), QTransform()) != nullptr &&
             itemAt(event->scenePos(), QTransform())->parentItem() != nullptr &&
@@ -548,6 +547,8 @@ void SchemeScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 
 void SchemeScene::clearScene()
 {
+    if (items().isEmpty())
+        return;
     for (auto item : items())
     {
         if (item->type() >= SchemeItem::SchemeType)

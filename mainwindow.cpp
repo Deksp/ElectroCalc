@@ -13,6 +13,7 @@
 #include <QDataStream>
 #include <QTreeWidget>
 #include <QKeyEvent>
+#include <QApplication>
 
 
 
@@ -23,7 +24,8 @@ const QString MainWindow::SetingsFileName = "setingsFile";
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
       mainLayout(new QHBoxLayout),
-      layoutScheme(nullptr)
+      layoutScheme(nullptr),
+      argvFilePath("nonpath")
 {
     setingsList();
     createToolGroup();
@@ -50,13 +52,21 @@ MainWindow::MainWindow(QWidget *parent)
     setWindowTitle(tr("ElectroCalc"));
     setGeometry(100,100,800,500);
 
-    //fileToolBar->setEnabled(false);
-    //editToolBar->setEnabled(false);
+    if (QApplication::arguments().size() == 2)
+    {
+        argvFilePath = QApplication::arguments()[1];
+        runOpenFile();
+    }
+
+
+    newFile->setEnabled(false);
     cut->setEnabled(false);
     copy->setEnabled(false);
+    _delete->setEnabled(false);
     paste->setEnabled(false);
     undo->setEnabled(false);
     redo->setEnabled(false);
+    showMaximized();
 }
 
 MainWindow::~MainWindow()
@@ -251,22 +261,31 @@ void MainWindow::runNewFile()
 
 void MainWindow::runOpenFile()
 {
-    QString fileName =
-        QFileDialog::getOpenFileName(this, tr("Open file"), "/", "*.*");
+    QString fileName;
+    if(argvFilePath == "nonpath")
+        fileName =
+            QFileDialog::getOpenFileName(this, tr("Open file"), "/", "*.*");
+    else
+    {
+        fileName = argvFilePath;
+        argvFilePath = "nonpath";
+    }
     if (fileName.isNull())
         return;
+
     QFile file(fileName);
     QDataStream stream(&file);
 
     file.open(QIODevice::ReadOnly);
     SchemeScene *scene = new SchemeScene;
     stream >> *scene;
-    qDebug()<<scene;
     this->scene << scene;
     file.close();
     view->setScene(this->scene.last());
     connect(clean, &QAction::triggered, scene, &SchemeScene::clearScene);
     connect(gridbinding, &QAction::toggled, scene, &SchemeScene::setGridBinding);
+    connect(scene, &SchemeScene::unChekButton, this, &MainWindow::unCheckButtonGroup);
+    connect(scene, &SchemeScene::input, this, &MainWindow::inputWidgetShow);
 }
 
 void MainWindow::runSaveFile()

@@ -1,5 +1,22 @@
 #include "calculation.h"
 #include <QDebug>
+#include <chrono>
+
+class SimpleTimer
+{
+    std::chrono::time_point<std::chrono::steady_clock> start,end;
+public:
+    SimpleTimer()
+    {
+        start = std::chrono::high_resolution_clock::now();
+    }
+    ~SimpleTimer()
+    {
+        end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<float> dur = end-start;
+        qDebug()<<"CRONO = "<<dur.count()<<"s";
+    }
+};
 
 Calculation::Calculation()
 {
@@ -17,6 +34,7 @@ Calculation::~Calculation()
 
 void Calculation::startingCalculations(LayoutScheme *layout)
 {
+    SimpleTimer stimer;
     m_layout = layout;
     uint size = layout->getVertexes().size();
     m_condactionMatrix.resize(size);
@@ -46,7 +64,8 @@ void Calculation::startingCalculations(LayoutScheme *layout)
     inverse();
     Zcalc();
     Icalc();
-    out();
+    //out();
+    qDebug()<<"ALL CALCULATION";
 }
 
 void Calculation::endCalculations()
@@ -150,8 +169,11 @@ void Calculation::createTree(QTreeWidget *tree)
     }
 }
 
+
+
 void Calculation::inverse()
 {
+    SimpleTimer stim;
     int N=m_condactionMatrix.length();
 
     complexnum **matrix = new complexnum *[N];
@@ -216,6 +238,7 @@ void Calculation::inverse()
     for (int i = 0; i < N; i++)
         delete [] matrix[i];
     delete [] matrix;
+    qDebug()<<"INVERSE";
 }
 
 void Calculation::out()

@@ -1,0 +1,29 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/branch.png</file>
+        <file>images/generator.png</file>
+        <file>images/load.png</file>
+        <file>images/Vertex.png</file>
+        <file>images/copy.png</file>
+        <file>images/cut.png</file>
+        <file>images/gridBinding.png</file>
+        <file>images/newFile.png</file>
+        <file>images/openFile.png</file>
+        <file>images/redo.png</file>
+        <file>images/run.jpg</file>
+        <file>images/saveFile.png</file>
+        <file>images/undo.png</file>
+        <file>images/grab.png</file>
+        <file>images/pointer.png</file>
+        <file>images/select.png</file>
+        <file>images/gridVisible.png</file>
+        <file>images/grid.png</file>
+        <file>images/clean.png</file>
+        <file>images/def_values.png</file>
+        <file>images/delete.png</file>
+        <file>images/accept.png</file>
+        <file>images/inverseCondaction.png</file>
+        <file>images/step.png</file>
+        <file>images/service-example.png</file>
+    </qresource>
+</RCC>

@@ -6,6 +6,7 @@
 
 #include "node.h"
 
+
 class SchemeItem;
 class SelectionGlow;
 class VertexItem;

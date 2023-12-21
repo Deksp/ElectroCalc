@@ -4,7 +4,7 @@ TRANSLATIONS = Translations/Stady_ru.ts
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-CONFIG += c++11
+CONFIG += c++23
 
 DEFINES += QT_DEPRECATED_WARNINGS
 
@@ -28,7 +28,11 @@ HEADERS += \
     schemescene.h \
     viewscheme.h
 
+
 win32:RC_FILE = logores.rc
+
+INCLUDEPATH += ./boost_mingw_64/include/boost-1_83
+LIBS += -L./boost_mingw_64/lib -llibboost_locale-mgw7-mt-x64-1_83
 
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin

@@ -5,11 +5,13 @@
 #include <QToolButton>
 #include <QDialog>
 #include <QLineEdit>
+#include <QSettings>
 
 #include "viewscheme.h"
 #include "schemescene.h"
 #include "layoutscheme.h"
 #include "calculation.h"
+
 
 QT_BEGIN_NAMESPACE
 class QAction;
@@ -17,6 +19,7 @@ class QButtonGroup;
 class QToolButton;
 class QHBoxLayout;
 class QGridLayout;
+class QSpinBox;
 QT_END_NAMESPACE
 class AddButton;
 class InputWidget;
@@ -44,11 +47,13 @@ protected:
 
 private slots:
     void Calc();
+    void stepCalc();
     void inputWidgetShow(LayoutScheme *layout, Node *node, const QPoint &pos);
     void buttonGroupClicked(QAbstractButton *sender, bool cheked);
     void unCheckButtonGroup();
     void runNewFile();
     void runOpenFile();
+    void runOpenExampleFile();
     void runSaveFile();
 
 private:
@@ -64,6 +69,7 @@ private:
     QMenu *helpMenu;
 
     QAction *newFile;
+    QAction *openExample;
     QAction *openFile;
     QAction *saveFile;
 
@@ -82,6 +88,8 @@ private:
     QAction *gridbinding;
 
     QAction *runAction;
+    QSpinBox *stepsForRun;
+    QAction *stepRunAction;
 
     QToolBar *fileToolBar;
     QToolBar *editToolBar;
@@ -97,9 +105,10 @@ private:
 
     Calculation calc;
     LayoutScheme *layoutScheme;
-    QString lastDirectory;
+    QString lastSaveDirectory;
+    QString lastOpenDirectory;
     QString argvFilePath;
-    static const QString SetingsFileName;
+    QSettings programSetings;
 };
 
 ///-----class for setting up buttons----///
@@ -131,6 +140,7 @@ private:
     LayoutScheme *m_layout;
     Node *m_node;
     QLineEdit lineEdit;
+    QLineEdit lineEditTwo;
     QLineEdit polyarLineEdit;
     QGridLayout *layoutWidget;
     bool polyarState;

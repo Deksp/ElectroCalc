@@ -2,13 +2,14 @@
 #define LAUOUYTSCHEM_H
 
 #include <QVector>
-
 #include "node.h"
+
 
 typedef QPair<double, double> Dpair;
 
 class LayoutScheme
 {
+public:
 ///----Inner_Classes----///
     class VertexNode;
     class GeneratorNode;
@@ -27,6 +28,7 @@ public:
     void setVoltage(Node *Generator, complexnum voltage);
     void setLoad(Node *load, complexnum resistance);
     void setBranch(Node *branch, complexnum resistance);
+    void setPoverful(Node *load, complexnum powerful);
 
     void deleteNode(Node *node);
 
@@ -49,15 +51,16 @@ public:
     QList<Dpair> serializationNode(Node *node);
     Node *deserializationNode(QList<Dpair> list);
 
-private:
-    uint m_layoutId;
-    static uint m_quanityLayout;
-    static const int defaultValue = 1;
-
     QVector<VertexNode *> m_vertex;
     QVector<GeneratorNode *> m_generator;
     QVector<BranchNode *> m_branch;
     QVector<LoadNode *> m_load;
+public:
+    uint m_layoutId;
+    static uint m_quanityLayout;
+    static const int defaultValue = 1;
+
+
 
 ///-------------Inner_Classes-------------///
 
@@ -81,6 +84,7 @@ private:
         virtual complexnum getTypeNodeProperty() const override;
         virtual QString getStringTypeNodeProperty() const override;
         virtual Node *getAssignedNode(Node *node = nullptr) override;
+        int getLoadIdAt(LoadNode* load){int a=0;for(auto i : m_load){a++;if (i==load) return a;}}
 
     private:
         QVector<LoadNode *> m_load;
@@ -150,9 +154,13 @@ private:
         virtual int type() const override;
         virtual bool isLink(Node *node) const override;
         virtual Node *getAssignedNode(Node *node = nullptr) override;
+        void setPowerful(complexnum powerful);
+        complexnum getPowerful();
+        QString getStringPowerful();
 
     private:
         VertexNode *m_assignedNode;
+        complexnum powerful;
     };
 
 ///-------------Inner_Classes-------------///

@@ -3,6 +3,7 @@
 
 #include <QGraphicsView>
 
+
 class ViewScheme : public QGraphicsView
 {
     Q_OBJECT

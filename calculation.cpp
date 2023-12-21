@@ -1,10 +1,13 @@
 #include "calculation.h"
 #include <QDebug>
 #include <chrono>
+#include <QRegExp>
+#include <QtMath>
+
 
 class SimpleTimer
 {
-    std::chrono::time_point<std::chrono::steady_clock> start,end;
+    std::chrono::time_point<std::chrono::_V2::system_clock,std::chrono::duration<double>> start,end;
 public:
     SimpleTimer()
     {
@@ -13,10 +16,21 @@ public:
     ~SimpleTimer()
     {
         end = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<float> dur = end-start;
+        std::chrono::duration<double> dur = end-start;
         qDebug()<<"CRONO = "<<dur.count()<<"s";
     }
 };
+
+static double complex_abs(complexnum c)
+{
+    return sqrt(pow(c.real(),2)+pow(c.imag(),2));
+}
+
+QDebug& operator<<(QDebug& out, complexnum num)
+{
+    out<<"("<<num.real()<<","<<num.imag()<<")";
+    return  out;
+}
 
 Calculation::Calculation()
 {
@@ -32,45 +46,112 @@ Calculation::~Calculation()
     }
 }
 
-void Calculation::startingCalculations(LayoutScheme *layout)
+void Calculation::stepCalculations(LayoutScheme *layout)
 {
-    SimpleTimer stimer;
+    //SimpleTimer stimer;
     m_layout = layout;
     uint size = layout->getVertexes().size();
+    m_condactionMatrix.clear();
+    m_invcondactionMatrix.clear();
     m_condactionMatrix.resize(size);
     m_invcondactionMatrix.resize(size);
-    for (uint i=0; i<size; i++)
-    {
-        m_condactionMatrix[i].resize(size);
-        m_invcondactionMatrix[i].resize(size);
-        for (uint j=0; j<size; j++)
+
+    //while (!iterCondition) {
+if (firstCalc)
+firstCalc = false;
+else Iter();
+        for (uint i=0; i<size; i++)
         {
-            if (i==j)
+            m_condactionMatrix[i].resize(size);
+            m_invcondactionMatrix[i].resize(size);
+            for (uint j=0; j<size; j++)
             {
-                for (auto branch : layout->getVertex(i)->getBranchs())
-                    if (branch->getResistance()!=complexnum(0))
-                        m_condactionMatrix[i][j] += complexnum(1)/branch->getResistance();
-                for (auto load : layout->getVertex(i)->getLoads())
-                    if (load->getResistance()!=complexnum(0))
-                        m_condactionMatrix[i][j] += complexnum(1)/load->getResistance();
-                m_condactionMatrix[i][j] *= complexnum(-1);
+                if (i==j)
+                {
+                    for (auto branch : layout->getVertex(i)->getBranchs())
+                        if (branch->getResistance()!=complexnum(0))
+                            m_condactionMatrix[i][j] += complexnum(1)/branch->getResistance();
+                    for (auto load : layout->getVertex(i)->getLoads())
+                        if (load->getResistance()!=complexnum(0))
+                            m_condactionMatrix[i][j] += complexnum(1)/load->getResistance();
+                    m_condactionMatrix[i][j] *= complexnum(-1);
+                }
+                else if (layout->getVertex(i)->getBranchAt(layout->getVertex(j)) != nullptr &&
+                         layout->getVertex(i)->getBranchAt(layout->getVertex(j))->getResistance()!=complexnum(0))
+                    m_condactionMatrix[i][j] = complexnum(1)/
+                            layout->getVertex(i)->getBranchAt(layout->getVertex(j))->getResistance();
             }
-            else if (layout->getVertex(i)->getBranchAt(layout->getVertex(j)) != nullptr &&
-                     layout->getVertex(i)->getBranchAt(layout->getVertex(j))->getResistance()!=complexnum(0))
-                m_condactionMatrix[i][j] = complexnum(1)/
-                        layout->getVertex(i)->getBranchAt(layout->getVertex(j))->getResistance();
         }
+        inverse();
+        Zcalc();
+        Icalc();
+        scocIt++;
+        if (scocIt > 1)
+        {
+            volatile int a =0;
+        }
+        VoltCalc();
+
+qDebug()<<" ";
+qDebug()<<"Iteration: "<<scocIt;
+    out();
+
+}
+
+void Calculation::startingCalculations(LayoutScheme *layout, int value)
+{
+    //SimpleTimer stimer;
+    m_layout = layout;
+    uint size = layout->getVertexes().size();
+    m_condactionMatrix.clear();
+    m_invcondactionMatrix.clear();
+    m_condactionMatrix.resize(size);
+    m_invcondactionMatrix.resize(size);
+value--;
+    while (!iterCondition && scocIt<=value) {
+if (firstCalc)
+firstCalc = false;
+else Iter();
+        for (uint i=0; i<size; i++)
+        {
+            m_condactionMatrix[i].resize(size);
+            m_invcondactionMatrix[i].resize(size);
+            for (uint j=0; j<size; j++)
+            {
+                if (i==j)
+                {
+                    for (auto branch : layout->getVertex(i)->getBranchs())
+                        if (branch->getResistance()!=complexnum(0))
+                            m_condactionMatrix[i][j] += complexnum(1)/branch->getResistance();
+                    for (auto load : layout->getVertex(i)->getLoads())
+                        if (load->getResistance()!=complexnum(0))
+                            m_condactionMatrix[i][j] += complexnum(1)/load->getResistance();
+                    m_condactionMatrix[i][j] *= complexnum(-1);
+                }
+                else if (layout->getVertex(i)->getBranchAt(layout->getVertex(j)) != nullptr &&
+                         layout->getVertex(i)->getBranchAt(layout->getVertex(j))->getResistance()!=complexnum(0))
+                    m_condactionMatrix[i][j] = complexnum(1)/
+                            layout->getVertex(i)->getBranchAt(layout->getVertex(j))->getResistance();
+            }
+        }
+        inverse();
+        Zcalc();
+        Icalc();
+        scocIt++;
+        if (scocIt > 1)
+        {
+            volatile int a =0;
+        }
+        VoltCalc();
+
+qDebug()<<" ";
+qDebug()<<"Iteration: "<<scocIt;
+    out();
     }
-    inverse();
-    Zcalc();
-    Icalc();
-    //out();
-    qDebug()<<"ALL CALCULATION";
 }
 
 void Calculation::endCalculations()
 {
-
     m_condactionMatrix.clear();
     m_invcondactionMatrix.clear();
     for (auto ver : m_Z)
@@ -86,6 +167,7 @@ void Calculation::endCalculations()
 
 void Calculation::createTree(QTreeWidget *tree)
 {
+    tree->headerItem()->setText(0, "");
     QList<QTreeWidgetItem *> topicsItems;
     QVector<QStringList> topics;
     topics << QStringList(QString(QObject::tr("Condactions matrix")))<< QStringList(QString(QObject::tr("Reverse Condactions matrix")))
@@ -141,30 +223,29 @@ void Calculation::createTree(QTreeWidget *tree)
     }
     i = 0;
     QList<QTreeWidgetItem *> VertexesCurrents;
-    for  (auto vertex : I_final)
+    for  (QMap<QString, complexnum>::iterator it=branchCurrentName.begin();it!=branchCurrentName.end();++it)
     {
-        VertexesCurrents.append(new QTreeWidgetItem(topicsItems[4], QStringList(QString(QObject::tr("Vertex %1")).arg(1 + i))));
-        QList<QTreeWidgetItem *> Currents;
+        VertexesCurrents.append(new QTreeWidgetItem(topicsItems[4], QStringList(QString(it.key() + " = " + conver(it.value()) + " A"))));
+        /*QList<QTreeWidgetItem *> Currents;
         for (QMap<QString, complexnum>::iterator I=vertex.begin();I!=vertex.end();++I)
             Currents.append(new QTreeWidgetItem(VertexesCurrents[i],
                                                  QStringList(I.key() + " = " + conver(I.value()) + "A")));
-        ++i;
+        ++i;*/
     }
     i = 0;
     QList<QTreeWidgetItem *> CheckVertexesCurrents;
     for  (auto vertex : I_final)
     {
-        CheckVertexesCurrents.append(new QTreeWidgetItem(topicsItems[5], QStringList(QString(QObject::tr("Vertex %1")).arg(1 + i))));
-        QList<QTreeWidgetItem *> CheckCurrents;
         complexnum num;
         for (QMap<QString, complexnum>::iterator I=vertex.begin();I!=vertex.end();++I)
             num += I.value();
-        CheckCurrents.append(new QTreeWidgetItem(CheckVertexesCurrents[i],
-                                                 QStringList(QObject::tr("Amount without rounding\n ") + conver(num))));
-        CheckCurrents.append(new QTreeWidgetItem(CheckVertexesCurrents[i],
-                                                 QStringList(QObject::tr("The amount with rounding\nto the third digit\n ") +
+        CheckVertexesCurrents.append(new QTreeWidgetItem(topicsItems[5],
+                                                 QStringList(QObject::tr("Vertex %1 Amount without rounding\n ").arg(1+i) + conver(num))));
+        CheckVertexesCurrents.append(new QTreeWidgetItem(topicsItems[5],
+                                                 QStringList(QObject::tr("Vertex %1 The amount with rounding\nto the third digit\n ").arg(1+i) +
                                                              QString::number(num.real(), 'f', 3) +
                                                              " + " + QString::number(num.imag(), 'f', 3) + "i")));
+        CheckVertexesCurrents.append(new QTreeWidgetItem(topicsItems[5],QStringList(QString(" "))));
         ++i;
     }
 }
@@ -173,7 +254,7 @@ void Calculation::createTree(QTreeWidget *tree)
 
 void Calculation::inverse()
 {
-    SimpleTimer stim;
+    //SimpleTimer stim;
     int N=m_condactionMatrix.length();
 
     complexnum **matrix = new complexnum *[N];
@@ -238,11 +319,23 @@ void Calculation::inverse()
     for (int i = 0; i < N; i++)
         delete [] matrix[i];
     delete [] matrix;
-    qDebug()<<"INVERSE";
 }
 
+
+
 void Calculation::out()
-{
+{int i =0;
+    qDebug()<<"  ";
+    for (auto it : m_layout->getLoads())
+    {
+        qDebug().noquote()<<QString("Z(%1[%2]) = ").arg(it->getAssignedNode()->getIndex(),
+        QString::number(static_cast<LayoutScheme::VertexNode*>(it->getAssignedNode())->getLoadIdAt(it)))
+                         <<conver(it->getResistance());
+        qDebug().noquote()<<QString("Y(%1[%2]) = ").arg(it->getAssignedNode()->getIndex(),
+        QString::number(static_cast<LayoutScheme::VertexNode*>(it->getAssignedNode())->getLoadIdAt(it)))
+                         <<conver((complexnum)1/it->getResistance());
+    }
+    qDebug()<<"  ";
     for (auto i : m_condactionMatrix)
     {
         QString out;
@@ -259,7 +352,7 @@ void Calculation::out()
         qDebug().noquote()<<out;
     }
     qDebug()<<" ";
-    int i =0;
+
     for (auto ver : m_Z)
     {
         for (MutualVals::iterator t=ver.begin();t!=ver.end();++t)
@@ -276,19 +369,55 @@ void Calculation::out()
         qDebug()<<"  ";
         i++;
     }
+
     qDebug()<<" ";
     i =0;
-    for (auto ver : I_final)
+    for (QMap<QString, complexnum>::iterator it=branchCurrentName.begin();it!=branchCurrentName.end();++it)
     {
-        for (QMap<QString, complexnum>::iterator t=ver.begin();t!=ver.end();++t)
-            qDebug().noquote()<<t.key()<<t.value().real()<<t.value().imag();
-        qDebug()<<"  ";
-        i++;
+        if (it.value().real()<0)
+        {
+            QRegExp pat("I\\(V\\d+->V\\d+\\)");
+
+            if (pat.indexIn(it.key()) > -1)
+            {
+                QRegExp Num("(\\d+)");
+                QStringList list;
+                int pos = 0;
+
+                while ((pos = Num.indexIn(it.key(), pos)) != -1) {
+                    list << Num.cap(1);
+                    pos += Num.matchedLength();
+                }
+                qDebug().noquote()<<QString("I(V%1->V%2)").arg(list[1],list[0]) <<" = " + conver(it.value()) + " A";
+            }
+        }
+        qDebug().noquote()<<it.key() + " = " + conver(it.value()) + " A";
     }
+    qDebug()<<"  ";
+    for (QMap<QString, complexnum>::iterator it=voltageDropName.begin();it!=voltageDropName.end();++it)
+    {
+        qDebug().noquote()<<it.key() + " = " <<
+                            //conver(it.value()) << " V";
+                            std::abs(it.value()) << " V";
+    }
+    qDebug()<<"  ";
+    for (QMap<QString, complexnum>::iterator it=voltageDropName.begin();it!=voltageDropName.end();++it)
+    {
+        qDebug().noquote()<<it.key() + " = " <<
+                            conver(it.value()) << " V";
+                            //std::abs(it.value()) << " V";
+    }
+
 }
 
 void Calculation::Zcalc()
 {
+    for (auto ver : m_Z)
+    {
+        for (MutualVals::iterator t=ver.begin();t!=ver.end();++t)
+            delete t.key();
+    }
+    m_Z.clear();
     for (auto vertex : m_layout->getVertexes())
     {
         MutualVals mutualVals;
@@ -332,6 +461,9 @@ void Calculation::Zcalc()
 
 void Calculation::Icalc()
 {
+    I_first.clear();
+    I_final.clear();
+    branchCurrentName.clear();
     for (auto Zcondaction : m_Z)
     {
         MutualVals map;
@@ -363,6 +495,7 @@ void Calculation::Icalc()
         }
         I_first << map;
     }
+
     int vertexid_1 = 0;
     for (auto Icurrent : I_first)
     {
@@ -375,13 +508,138 @@ void Calculation::Icalc()
         I_final << map;
         vertexid_1++;
     }
+    for (auto vert : I_final)
+    {
+        for (BranchsCurrentName::iterator Icur=vert.begin();Icur!=vert.end();++Icur)
+            if (!branchCurrentName.contains(trueCurrentName(Icur.key())))
+                if (Icur.key() == trueCurrentName(Icur.key()))
+                {
+                    QRegExp paternBranch("I\\(V\\d+->V\\d+\\)");
+
+                    int sovp = paternBranch.indexIn(Icur.key());
+                    if(sovp > -1)
+                        branchCurrentName[trueCurrentName(Icur.key())] = Icur.value() * complexnum(-1);
+                    else
+                        branchCurrentName[trueCurrentName(Icur.key())] = Icur.value();
+                }
+    }
+}
+
+complexnum myabsForIwhithU(complexnum c)
+{
+    return c.real() >= 0 ? c : c*complexnum(-1);
+}
+
+void Calculation::VoltCalc()
+{
+    voltageDrop.clear();
+    voltageDropName.clear();
+    for (BranchsCurrentName::iterator it=branchCurrentName.begin();it!=branchCurrentName.end();++it)
+    {
+        QString forma(it.key());
+        forma[0] = 'U';
+        auto curentNode = static_cast<LayoutScheme::BranchNode*>(returnNodeFromTextCurrent(it.key()));
+        auto rZ = static_cast<LayoutScheme::BranchNode*>
+                (curentNode)->getResistance();
+        //qDebug()<<conver(rZ);
+        auto Ielem =myabsForIwhithU(it.value());
+        complexnum volt = complexnum(rZ * Ielem);
+        voltageDrop[returnNodeFromTextCurrent(it.key())] = volt;
+        voltageDropName[forma] = volt;
+    }
+}
+
+Node *Calculation::returnNodeFromTextCurrent(QString zapis)
+{
+    QRegExp paternGen("I\\(E\\d+\\)");
+    QRegExp paternBranch("I\\(V\\d+->V\\d+\\)");
+    QRegExp paternLoad("I\\(V\\d+\\[\\d+\\]\\)");
+
+    int sovppaternGen = paternGen.indexIn(zapis);
+    int sovppaternBranch = paternBranch.indexIn(zapis);
+    int sovppaternLoad = paternLoad.indexIn(zapis);
+
+    if(sovppaternGen > -1)
+    {
+        QRegExp Num("(\\d+)");
+        QStringList list;
+        int pos = 0;
+
+        while ((pos = Num.indexIn(zapis, pos)) != -1) {
+            list << Num.cap(1);
+            pos += Num.matchedLength();
+        }
+        uint32_t firstNum = list[0].toInt() - 1;
+        return m_layout->getGenerator(firstNum)->getBranchs()[0];
+    }
+    if(sovppaternBranch > -1)
+    {
+
+        QRegExp Num("(\\d+)");
+        QStringList list;
+        int pos = 0;
+
+        while ((pos = Num.indexIn(zapis, pos)) != -1) {
+            list << Num.cap(1);
+            pos += Num.matchedLength();
+        }
+        uint32_t firstNum = list[0].toInt() - 1;
+        uint32_t secondNum = list[1].toInt() - 1;
+        return m_layout->getVertex(firstNum)->getBranchAt(m_layout->getVertex(secondNum));
+    }
+    if(sovppaternLoad > -1)
+    {
+
+        QRegExp Num("(\\d+)");
+        QStringList list;
+        int pos = 0;
+
+        while ((pos = Num.indexIn(zapis, pos)) != -1) {
+            list << Num.cap(1);
+            pos += Num.matchedLength();
+        }
+        uint32_t firstNum = list[0].toInt() - 1;
+        uint32_t secondNum = list[1].toInt() - 1;
+        return m_layout->getVertex(firstNum)->getLoads()[secondNum];
+    }
+    return 0;
+}
+bool condSovp(complexnum newZ, complexnum oldZ){
+    double procDizSovp = 0.05;
+    double realProc;
+    if (complex_abs(newZ) > complex_abs(oldZ))
+        realProc = (complex_abs(newZ) / complex_abs(oldZ))-1;
+    else
+        realProc = (complex_abs(oldZ) / complex_abs(newZ))-1;
+    return procDizSovp > realProc;
+}
+void Calculation::Iter()
+{
+    complexnum soprZ;
+    for (auto node : m_layout->getLoads())
+    {
+        soprZ = (sqrt(3)*std::pow(std::abs(voltageDrop[node]),2))/complexnum(node->getPowerful().real(),-1*node->getPowerful().imag());
+        auto newZ = complexnum(soprZ.real(),soprZ.imag());
+        //auto newZ = complexnum((sqrt(3)*std::pow(voltageDrop[node],2))/node->getPowerful());
+        iterCondition = true;
+        if (!condSovp(newZ,node->getResistance()))
+        {
+            if (newZ.real() <= 0)
+            {
+                //qDebug()<<conver(voltageDrop[node])<<conver(std::pow(voltageDrop[node],2))<<conver(sqrt(3)*std::pow(voltageDrop[node],2))
+                  //     <<conver(soprPowerful)+" "<<conver(soprZ)<<conver(newZ);
+            }
+            node->setResistance(newZ);
+            iterCondition = false;
+        }
+    }
 }
 
 QString Calculation::conver(const complexnum &num)
 {
     if(num.imag()>=0)
-        return QString("%1+%2i").arg(QString::number(num.real()), QString::number(num.imag()));
-    return QString("%1%2i").arg(QString::number(num.real()), QString::number(num.imag()));
+        return QString("%1 +%2i").arg(QString::number(num.real()), QString::number(num.imag()));
+    return QString("%1 %2i").arg(QString::number(num.real()), QString::number(num.imag()));
 }
 
 QString Calculation::Zname(Calculation::MutualPair *pair, Node *currentNode)
@@ -493,4 +751,31 @@ complexnum Calculation::Z(const MutualPair &pair, Node *currentNode)
                                    [pair.m_mutualNode->getAssignedNode()->getId()-1];
         break;
     }
+}
+
+QString Calculation::trueCurrentName(QString currentFinalName)
+{
+    QRegExp paternBranch("I\\(V\\d+->V\\d+\\)");
+
+    int sovp = paternBranch.indexIn(currentFinalName);
+    if(sovp > -1)
+    {
+
+        QRegExp Num("(\\d+)");
+        QStringList list;
+        int pos = 0;
+
+        while ((pos = Num.indexIn(currentFinalName, pos)) != -1) {
+            list << Num.cap(1);
+            pos += Num.matchedLength();
+        }
+        uint32_t firstNum = list[0].toInt();
+        uint32_t secondNum = list[1].toInt();
+
+        if(firstNum > secondNum)
+            return QString("I(V%1->V%2)").arg(secondNum,firstNum);
+        return currentFinalName;
+    }
+    else
+        return currentFinalName;
 }

@@ -1,0 +1,3 @@
+/boost_mingw_64/lib
+*.user*
+*.scm

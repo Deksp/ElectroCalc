@@ -55,7 +55,7 @@ Node *LayoutScheme::addBranch(Node *firstNode, Node *secondNode)
                 static_cast<VertexNode*>(firstNode)->getBranchs().size()==1)
             return nullptr;
         if (secondNode->type() == Node::TypeGeneratorNode &&
-             static_cast<VertexNode*>(secondNode)->getBranchs().size()==1)
+                static_cast<VertexNode*>(secondNode)->getBranchs().size()==1)
             return nullptr;
     }
     m_branch << new BranchNode(firstNode, secondNode);
@@ -91,6 +91,11 @@ void LayoutScheme::setLoad(Node *load, complexnum resistance)
 void LayoutScheme::setBranch(Node *branch, complexnum resistance)
 {
     static_cast<BranchNode*>(branch)->setResistance(resistance);
+}
+
+void LayoutScheme::setPoverful(Node *load, complexnum powerful)
+{
+    static_cast<LoadNode*>(load)->setPowerful(powerful);
 }
 
 void LayoutScheme::deleteNode(Node *node)
@@ -214,7 +219,9 @@ QList<Dpair> LayoutScheme::serializationNode(Node *node)
         return QList<Dpair>()<< Dpair(node->type(),0) <<
                Dpair(static_cast<LoadNode*>(node)->getAssignedNode()->getId(),0) <<
                Dpair(static_cast<LoadNode*>(node)->getResistance().real(),
-                     static_cast<LoadNode*>(node)->getResistance().imag());
+                     static_cast<LoadNode*>(node)->getResistance().imag()) <<
+               Dpair(static_cast<LoadNode*>(node)->getPowerful().real(),
+                     static_cast<LoadNode*>(node)->getPowerful().imag());
         break;
     default:
         break;
@@ -263,8 +270,21 @@ Node *LayoutScheme::deserializationNode(QList<Dpair> list)
     {
         Node *assignNode = getVertex(list[1].first-1);
         node = addLoad(assignNode);
-        static_cast<LoadNode*>(node)->setResistance(
-                    complexnum(list[2].first, list[2].second));
+        auto resistance = complexnum(list[2].first, list[2].second);
+        auto powerful = complexnum(list[3].first, list[3].second);
+        complexnum Ysopr;
+        auto num = static_cast<LoadNode*>(node)->getAssignedNode()->getId();
+        switch (num) {
+        case 3:
+        case 4:
+        case 5:
+        default:
+            static_cast<LoadNode*>(node)->setResistance(resistance);
+            static_cast<LoadNode*>(node)->setPowerful(powerful);
+        }
+
+        //static_cast<LoadNode*>(node)->setResistance(resistance);
+        //static_cast<LoadNode*>(node)->setPowerful(powerful);
     }
         break;
     default:
@@ -545,4 +565,25 @@ Node *LayoutScheme::LoadNode::getAssignedNode(Node *node)
 {
     Q_UNUSED(node)
     return m_assignedNode;
+}
+
+void LayoutScheme::LoadNode::setPowerful(complexnum powerful)
+{
+    this->powerful = powerful;
+}
+
+complexnum LayoutScheme::LoadNode::getPowerful()
+{
+    return powerful;
+}
+
+QString LayoutScheme::LoadNode::getStringPowerful()
+{
+    if (m_resistace.imag()>=0)
+        return QString("%1+%2i").
+                arg(QString::number(powerful.real()),
+                    QString::number(powerful.imag()));
+    return QString("%1%2i").
+            arg(QString::number(powerful.real()),
+                QString::number(powerful.imag()));
 }

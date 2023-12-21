@@ -563,7 +563,21 @@ void SchemeScene::clearScene()
 
 void SchemeScene::removeSelectedItems()
 {
-
+    if (items().isEmpty())
+        return;
+    for (auto item : items())
+    {
+        if (item->isSelected())
+        {
+            if (item->type() >= SchemeItem::SchemeType)
+            {
+                m_layoutScheme->deleteNode(static_cast<SchemeItem*>(item)->getNode());
+                removeItem(item);
+            }
+            else
+                removeItem(item);
+        }
+    }
 }
 
 void SchemeScene::turn()

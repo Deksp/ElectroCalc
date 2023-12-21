@@ -14,12 +14,12 @@
 #include <QTreeWidget>
 #include <QKeyEvent>
 #include <QApplication>
-
+#include <QSettings>
+#include <QSpinBox>
 
 
 extern QString tabStyle;
 bool InputWidget::defValsStatus = false;
-const QString MainWindow::SetingsFileName = "setingsFile";
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
@@ -59,40 +59,38 @@ MainWindow::MainWindow(QWidget *parent)
     }
 
 
-    newFile->setEnabled(false);
+/*    newFile->setEnabled(false);
     cut->setEnabled(false);
     copy->setEnabled(false);
     _delete->setEnabled(false);
     paste->setEnabled(false);
     undo->setEnabled(false);
-    redo->setEnabled(false);
+    redo->setEnabled(false);*/
     showMaximized();
 }
 
 MainWindow::~MainWindow()
 {
-    QFile file(SetingsFileName);
-    QDataStream stream(&file);
-
-    file.open(QIODevice::WriteOnly);
-    stream << lastDirectory;
-    file.close();
+    calc.endCalculations();
+    programSetings.setValue("Settings/DirSavePath", lastSaveDirectory);
+    programSetings.setValue("Settings/DirOpenPath", lastOpenDirectory);
 }
 
 void MainWindow::createToolBar()
 {
     fileToolBar = addToolBar(tr("File"));
-    fileToolBar->addAction(newFile);
+    //fileToolBar->addAction(newFile);
+    fileToolBar->addAction(openExample);
     fileToolBar->addAction(openFile);
     fileToolBar->addAction(saveFile);
 
     editToolBar = addToolBar(tr("Edit"));
     editToolBar->addAction(clean);
     editToolBar->addAction(_delete);
-    editToolBar->addAction(cut);
+/*    editToolBar->addAction(cut);
     editToolBar->addAction(copy);
     editToolBar->addAction(undo);
-    editToolBar->addAction(redo);
+    editToolBar->addAction(redo);*/
 
     pointerToolBar = addToolBar(tr("Pointer"));
     pointerToolBar->addAction(choiseModeAction);
@@ -105,6 +103,8 @@ void MainWindow::createToolBar()
 
     runToolBar = addToolBar(tr("Run"));
     runToolBar->addAction(runAction);
+    runToolBar->addWidget(stepsForRun);
+    runToolBar->addAction(stepRunAction);
 }
 
 void MainWindow::createToolGroup()
@@ -140,9 +140,13 @@ void MainWindow::createMenuBar()
 
 void MainWindow::createActions()
 {
-    newFile = new QAction(QIcon(":/images/newFile.png"), tr("New File"), this);
+    /*newFile = new QAction(QIcon(":/images/newFile.png"), tr("New File"), this);
     newFile->setStatusTip(tr("Create new file"));
-    connect(newFile, &QAction::triggered, this, &MainWindow::runNewFile);
+    connect(newFile, &QAction::triggered, this, &MainWindow::runNewFile);*/
+
+    openExample = new QAction(QIcon(":/images/service-example.png"), tr("Open Example"), this);
+    openExample->setStatusTip(tr("Open Example"));
+    connect(openExample, &QAction::triggered, this, &MainWindow::runOpenExampleFile);
 
     openFile = new QAction(QIcon(":/images/openFile.png"), tr("Open File"), this);
     openFile->setStatusTip(tr("Open file"));
@@ -153,15 +157,16 @@ void MainWindow::createActions()
     saveFile->setShortcut(tr("Ctrl+S"));
     connect(saveFile, &QAction::triggered, this, &MainWindow::runSaveFile);
 
-    clean = new QAction(QIcon(":/images/clean.png"), tr("Clean"), this);
-    clean->setStatusTip(tr("Clean"));
+    clean = new QAction(QIcon(":/images/clean.png"), tr("All Clean"), this);
+    clean->setStatusTip(tr("All Clean"));
     connect(clean, &QAction::triggered, getCurrentScene(), &SchemeScene::clearScene);
 
     _delete = new QAction(QIcon(":/images/delete.png"), tr("Delete"), this);
     _delete->setStatusTip(tr("Delete"));
     _delete->setShortcut(tr("DEL"));
+    connect(_delete, &QAction::triggered, getCurrentScene(), &SchemeScene::removeSelectedItems);
 
-    cut = new QAction(QIcon(":/images/cut.png"), tr("Cut"), this);
+/*    cut = new QAction(QIcon(":/images/cut.png"), tr("Cut"), this);
     cut->setStatusTip(tr("Cut"));
     cut->setShortcut(tr("Ctrl+X"));
 
@@ -179,7 +184,7 @@ void MainWindow::createActions()
 
     redo = new QAction(QIcon(":/images/redo.png"), tr("Redo"), this);
     redo->setStatusTip(tr("Redo"));
-    redo->setShortcut(tr("Ctrl+Y"));
+    redo->setShortcut(tr("Ctrl+Y"));*/
 
     choiseModeAction = new QAction(QIcon(":/images/pointer.png"), tr("Choise"), this);
     choiseModeAction->setStatusTip(tr("Usual mode"));
@@ -212,26 +217,34 @@ void MainWindow::createActions()
     runAction->setStatusTip(tr("Run"));
     runAction->setShortcut(tr("Ctrl+R"));
     connect(runAction, &QAction::triggered, this, &MainWindow::Calc);
+
+    stepsForRun = new QSpinBox(this);
+    stepsForRun->setMinimum(1);
+
+    stepRunAction = new QAction(QIcon(":/images/step.png"), tr("Step Run"), this);
+    stepRunAction->setStatusTip(tr("Step Run"));
+    stepRunAction->setShortcut(tr("Ctrl+Alt+R"));
+    connect(stepRunAction, &QAction::triggered, this, &MainWindow::stepCalc);
 }
 
 void MainWindow::setingsList()
 {
-    QFile file(SetingsFileName);
-    QDataStream stream(&file);
 
-    if (!file.exists())
+    QVariant is_firstRun = programSetings.value("Settings/is_firstOpen");
+
+    if (!is_firstRun.isValid())
     {
-        lastDirectory = "\\";
-        file.open(QIODevice::WriteOnly);
-        stream << lastDirectory;
-        file.close();
+        lastSaveDirectory = "\\";
+        lastOpenDirectory = "\\";
+        programSetings.setValue("Settings/is_firstOpen", false);
+        programSetings.setValue("/Settings/DirSavePath",lastSaveDirectory);
+        programSetings.setValue("/Settings/DirOpenPath",lastOpenDirectory);
         return;
     }
     else
     {
-        file.open(QIODevice::ReadOnly);
-        stream >> lastDirectory;
-        file.close();
+        lastSaveDirectory = programSetings.value("Settings/DirSavePath").toString();
+        lastOpenDirectory = programSetings.value("Settings/DirOpenPath").toString();
         return;
     }
 }
@@ -263,8 +276,11 @@ void MainWindow::runOpenFile()
 {
     QString fileName;
     if(argvFilePath == "nonpath")
+    {
         fileName =
-            QFileDialog::getOpenFileName(this, tr("Open file"), "/", "*.*");
+            QFileDialog::getOpenFileName(this, tr("Open file"), lastOpenDirectory, "*.*");
+        lastOpenDirectory = fileName.section('/', 0, -2) + '/';
+    }
     else
     {
         fileName = argvFilePath;
@@ -283,6 +299,41 @@ void MainWindow::runOpenFile()
     file.close();
     view->setScene(this->scene.last());
     connect(clean, &QAction::triggered, scene, &SchemeScene::clearScene);
+    connect(_delete, &QAction::triggered, scene, &SchemeScene::removeSelectedItems);
+    connect(gridbinding, &QAction::toggled, scene, &SchemeScene::setGridBinding);
+    connect(scene, &SchemeScene::unChekButton, this, &MainWindow::unCheckButtonGroup);
+    connect(scene, &SchemeScene::input, this, &MainWindow::inputWidgetShow);
+}
+
+void MainWindow::runOpenExampleFile()
+{
+    QString fileName;
+    argvFilePath = "./New_for_conference.scm";//"./Scheme_with_Powerful.scm";
+    if(argvFilePath == "nonpath")
+    {
+        fileName =
+            QFileDialog::getOpenFileName(this, tr("Open file"), lastOpenDirectory, "*.*");
+        lastOpenDirectory = fileName.section('/', 0, -2) + '/';
+    }
+    else
+    {
+        fileName = argvFilePath;
+        argvFilePath = "nonpath";
+    }
+    if (fileName.isNull())
+        return;
+
+    QFile file(fileName);
+    QDataStream stream(&file);
+
+    file.open(QIODevice::ReadOnly);
+    SchemeScene *scene = new SchemeScene;
+    stream >> *scene;
+    this->scene << scene;
+    file.close();
+    view->setScene(this->scene.last());
+    connect(clean, &QAction::triggered, scene, &SchemeScene::clearScene);
+    connect(_delete, &QAction::triggered, scene, &SchemeScene::removeSelectedItems);
     connect(gridbinding, &QAction::toggled, scene, &SchemeScene::setGridBinding);
     connect(scene, &SchemeScene::unChekButton, this, &MainWindow::unCheckButtonGroup);
     connect(scene, &SchemeScene::input, this, &MainWindow::inputWidgetShow);
@@ -291,8 +342,8 @@ void MainWindow::runOpenFile()
 void MainWindow::runSaveFile()
 {
     QString fileName =
-            QFileDialog::getSaveFileName(this, tr("Save file"), lastDirectory+getCurrentScene()->getSchemeName(), "*.scm");
-    lastDirectory = fileName.section('/', 0, -2) + '/';
+            QFileDialog::getSaveFileName(this, tr("Save file"), lastSaveDirectory+getCurrentScene()->getSchemeName(), "*.scm");
+    lastSaveDirectory = fileName.section('/', 0, -2) + '/';
 
     QFile file(fileName);
     QDataStream stream(&file);
@@ -302,21 +353,38 @@ void MainWindow::runSaveFile()
     file.close();
 }
 
+
 void MainWindow::Calc()
 {
-    calc.startingCalculations(getCurrentScene()->getLayoutSchem());
+    calc.startingCalculations(getCurrentScene()->getLayoutSchem(),stepsForRun->value());
 
-    QDockWidget *info = new QDockWidget(tr("Information about current scheme"),this);
+    QDockWidget *info = new QDockWidget(tr(QString("Iteration %1").arg(calc.scocIt).toLocal8Bit()),this);
     info->setMinimumWidth(250);
 
     QTreeWidget *treeWidget  = new QTreeWidget();
-    treeWidget->setColumnCount(1);
+    //treeWidget->setColumnCount(3);
+    calc.createTree(treeWidget);
+
+    info->setWidget(treeWidget);
+
+    addDockWidget(Qt::RightDockWidgetArea, info);
+
+    //calc.endCalculations();
+}
+
+void MainWindow::stepCalc()
+{
+    calc.stepCalculations(getCurrentScene()->getLayoutSchem());
+
+    QDockWidget *info = new QDockWidget(tr(QString("Iteration %1").arg(calc.scocIt).toLocal8Bit()),this);
+    info->setMinimumWidth(250);
+
+    QTreeWidget *treeWidget  = new QTreeWidget();
+    //treeWidget->setColumnCount(1);
     calc.createTree(treeWidget);
 
     info->setWidget(treeWidget);
     addDockWidget(Qt::RightDockWidgetArea, info);
-
-    calc.endCalculations();
 }
 
 void MainWindow::inputWidgetShow(LayoutScheme *layout, Node *node, const QPoint &pos)
@@ -367,9 +435,9 @@ QWidget *AddButton::createCellWidget()
     cellWidget->setLayout(layout);
     return cellWidget;
 }
-
+#include<iostream>
 InputWidget::InputWidget(LayoutScheme *layout, Node *node, QWidget *parent)
-    : QDialog(parent), m_layout(layout), m_node(node), lineEdit(this), polyarState(false), m_reversValue(false)
+    : QDialog(parent), m_layout(layout), m_node(node), lineEdit(this), lineEditTwo(), polyarState(false), m_reversValue(false)
 {
     layoutWidget = new QGridLayout;
 
@@ -407,6 +475,17 @@ InputWidget::InputWidget(LayoutScheme *layout, Node *node, QWidget *parent)
         layoutWidget->addWidget(polyarVid, 0, 3);
         layoutWidget->addWidget(aceptButton, 0, 4);
     }
+    else if (node->type() == Node::TypeLoadNode) {
+        lineEditTwo.setParent(this);
+        layoutWidget->addWidget(&lineEditTwo,1,2);
+        layoutWidget->addWidget(aceptButton, 0, 3);
+        QString lineValueTwo(static_cast<LayoutScheme::LoadNode*>(m_node)->getStringPowerful());
+        QFont font = lineEditTwo.font();
+        font.setPointSize(12);
+        lineEditTwo.setFont(font);
+        lineEditTwo.setText(lineValueTwo);
+        lineEditTwo.setSelection(0, lineValueTwo.size());
+    }
     else
         layoutWidget->addWidget(aceptButton, 0, 3);
 
@@ -418,6 +497,10 @@ InputWidget::InputWidget(LayoutScheme *layout, Node *node, QWidget *parent)
     lineEdit.setFont(font);
     lineEdit.setText(lineValue.contains('v') ? lineValue.remove(" v") : lineValue.remove(QString(" Ω")));
     lineEdit.setSelection(0, lineValue.size());
+
+    /*if (m_node->type() == m_node->TypeLoadNode)
+        qDebug()<<"Powerful: "<< static_cast<LayoutScheme::LoadNode*>(m_node)->getPowerful().real()<<"  "<<
+                                    static_cast<LayoutScheme::LoadNode*>(m_node)->getPowerful().imag();*/
 }
 
 void InputWidget::keyPressEvent(QKeyEvent *event)
@@ -431,7 +514,9 @@ void InputWidget::keyPressEvent(QKeyEvent *event)
 void InputWidget::acceptValue()
 {
     complexnum num;
+    complexnum powerful;
     num = convert(lineEdit.text());
+    powerful = convert(lineEditTwo.text());
     if (polyarState)
         num = complexnum(num.real()*cos(qDegreesToRadians(polyarLineEdit.text().toDouble())),
                 num.real()*sin(qDegreesToRadians(polyarLineEdit.text().toDouble())));
@@ -448,6 +533,7 @@ void InputWidget::acceptValue()
         break;
     case Node::TypeLoadNode:
         m_layout->setLoad(m_node, num);
+        m_layout->setPoverful(m_node, powerful);
         break;
     }
     this->~InputWidget();

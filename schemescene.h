@@ -6,6 +6,7 @@
 #include "layoutscheme.h"
 #include "schemeitem.h"
 
+
 class SchemeScene : public QGraphicsScene
 {
     Q_OBJECT

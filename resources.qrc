@@ -23,5 +23,7 @@
         <file>images/delete.png</file>
         <file>images/accept.png</file>
         <file>images/inverseCondaction.png</file>
+        <file>images/step.png</file>
+        <file>images/service-example.png</file>
     </qresource>
 </RCC>

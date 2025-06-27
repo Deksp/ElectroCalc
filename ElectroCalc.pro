@@ -17,7 +17,8 @@ SOURCES += \
     node.cpp \
     schemeitem.cpp \
     schemescene.cpp \
-    viewscheme.cpp
+    viewscheme.cpp \
+    debugoutputhandler.cpp
 
 HEADERS += \
     calculation.h \
@@ -26,7 +27,8 @@ HEADERS += \
     node.h \
     schemeitem.h \
     schemescene.h \
-    viewscheme.h
+    viewscheme.h \
+    debugoutputhandler.h
 
 
 win32:RC_FILE = logores.rc

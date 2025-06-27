@@ -57,8 +57,17 @@ void Calculation::stepCalculations(LayoutScheme *layout)
     m_invcondactionMatrix.resize(size);
 
     //while (!iterCondition) {
-if (firstCalc)
-firstCalc = false;
+if (firstCalc){
+    for (auto it : m_layout->getBranchs())
+    {
+        qDebug().noquote()<<QString("Z(%1->%2) = ").arg(it->getFirstNode()->getIndex(), it->getSecondNode()->getIndex())
+                         <<conver(it->getResistance());
+        qDebug().noquote()<<QString("Y(%1->%2) = ").arg(it->getFirstNode()->getIndex(), it->getSecondNode()->getIndex())
+                         <<conver((complexnum)1/it->getResistance());
+    }
+    qDebug()<<"  ";
+    firstCalc = false;
+}
 else Iter();
         for (uint i=0; i<size; i++)
         {
@@ -326,6 +335,7 @@ void Calculation::inverse()
 void Calculation::out()
 {int i =0;
     qDebug()<<"  ";
+
     for (auto it : m_layout->getLoads())
     {
         qDebug().noquote()<<QString("Z(%1[%2]) = ").arg(it->getAssignedNode()->getIndex(),
@@ -335,6 +345,7 @@ void Calculation::out()
         QString::number(static_cast<LayoutScheme::VertexNode*>(it->getAssignedNode())->getLoadIdAt(it)))
                          <<conver((complexnum)1/it->getResistance());
     }
+
     qDebug()<<"  ";
     for (auto i : m_condactionMatrix)
     {
@@ -605,7 +616,7 @@ Node *Calculation::returnNodeFromTextCurrent(QString zapis)
     return 0;
 }
 bool condSovp(complexnum newZ, complexnum oldZ){
-    double procDizSovp = 0.05;
+    double procDizSovp = 0.01;
     double realProc;
     if (complex_abs(newZ) > complex_abs(oldZ))
         realProc = (complex_abs(newZ) / complex_abs(oldZ))-1;

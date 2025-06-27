@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "debugoutputhandler.h"
 
 #include <QFile>
 #include <QLabel>
@@ -16,17 +17,43 @@
 #include <QApplication>
 #include <QSettings>
 #include <QSpinBox>
+#include <QSplitter>
+#include <QPlainTextEdit>
+#include <QHBoxLayout>
+#include <QVBoxLayout>
+#include <QButtonGroup>
+#include <QActionGroup>
+#include <QAbstractButton>
 
 
 extern QString tabStyle;
 bool InputWidget::defValsStatus = false;
 
+SidePlainTextWidget::SidePlainTextWidget(QWidget *parent)
+    : QPlainTextEdit(parent)
+{
+    setMinimumWidth(180);
+    setPlaceholderText(tr("Здесь можно делать заметки или выводить текст..."));
+    setReadOnly(true);
+}
+
+void SidePlainTextWidget::setDefaultText(const QString &text)
+{
+    if (text.isEmpty())
+        setPlainText(tr("Введите текст..."));
+    else
+        setPlainText(text);
+}
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
       mainLayout(new QHBoxLayout),
+      centralSplitter(new QSplitter(this)),
+      sideTextWidget(new SidePlainTextWidget(this)),
       layoutScheme(nullptr),
       argvFilePath("nonpath")
 {
+    DebugOutputHandler::install(sideTextWidget);
     setingsList();
     createToolGroup();
 
@@ -44,13 +71,20 @@ MainWindow::MainWindow(QWidget *parent)
     tabview->addTab(view, "Scheme1");
     tabview->setTabPosition(tabPosition(Qt::DockWidgetArea::BottomDockWidgetArea));
     tabview->setStyleSheet(tabStyle);
-    mainLayout->addWidget(tabview);
+
+    // используем splitter
+    centralSplitter->addWidget(tabview);
+    centralSplitter->addWidget(sideTextWidget);
+    centralSplitter->setStretchFactor(0, 4);
+    centralSplitter->setStretchFactor(1, 1);
+
+    mainLayout->addWidget(centralSplitter);
 
     QWidget *centralWidget = new QWidget;
     centralWidget->setLayout(mainLayout);
     setCentralWidget(centralWidget);
     setWindowTitle(tr("ElectroCalc"));
-    setGeometry(100,100,800,500);
+    setGeometry(100,100,900,500);
 
     if (QApplication::arguments().size() == 2)
     {

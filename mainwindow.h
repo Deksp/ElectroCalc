@@ -6,12 +6,13 @@
 #include <QDialog>
 #include <QLineEdit>
 #include <QSettings>
+#include <QPlainTextEdit>      // добавь для PlainTextEdit
+#include <QSplitter>           // добавь для QSplitter
 
 #include "viewscheme.h"
 #include "schemescene.h"
 #include "layoutscheme.h"
 #include "calculation.h"
-
 
 QT_BEGIN_NAMESPACE
 class QAction;
@@ -20,9 +21,21 @@ class QToolButton;
 class QHBoxLayout;
 class QGridLayout;
 class QSpinBox;
+class QSplitter;
 QT_END_NAMESPACE
+
 class AddButton;
 class InputWidget;
+
+// ---------- новый класс для бокового редактора ----------
+class SidePlainTextWidget : public QPlainTextEdit
+{
+    Q_OBJECT
+public:
+    explicit SidePlainTextWidget(QWidget *parent = nullptr);
+    void setDefaultText(const QString &text = QString());
+};
+// --------------------------------------------------------
 
 class MainWindow : public QMainWindow
 {
@@ -57,12 +70,15 @@ private slots:
     void runSaveFile();
 
 private:
-///-----interfase elements-----///
+    ///-----интерфейс-----///
     QHBoxLayout *mainLayout;
-
+    QSplitter *centralSplitter;            // новый splitter
     QTabWidget *tabview;
     ViewScheme *view;
     QVector<SchemeScene *> scene;
+
+    // новый редактор
+    SidePlainTextWidget *sideTextWidget;   // наш редактор справа
 
     QMenu *fileMenu;
     QMenu *editMenu;
@@ -101,7 +117,6 @@ private:
     AddButton *addGeneratorButton;
     AddButton *addBranchButton;
     AddButton *addLoadButton;
-///-----interfase elements-----///
 
     Calculation calc;
     LayoutScheme *layoutScheme;
